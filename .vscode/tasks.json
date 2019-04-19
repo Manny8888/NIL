@@ -1,0 +1,51 @@
+// See https://go.microsoft.com/fwlink/?LinkId=733558 // for the documentation about the tasks.json format 
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "command": "nim",
+            "args": [
+                "c",
+                "-o:../bin/${fileBasenameNoExtension}",
+                "--threads:on",
+                "${fileBasename}"
+            ],
+            "options": {
+                "cwd": "${workspaceRoot}/src"
+            },
+            "presentation": {
+                "reveal": "never",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "test",
+            "type": "shell",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "command": "nim",
+            "args": [
+                "c",
+                "-r",
+                "-o:../bin/${fileBasenameNoExtension}",
+                "--threads:on",
+                "${fileBasename}"
+            ],
+            "options": {
+                "cwd": "${workspaceRoot}/src"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

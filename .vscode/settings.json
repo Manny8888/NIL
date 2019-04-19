@@ -1,0 +1,8 @@
+{
+    "nim.buildOnSave": true,
+    "nim.buildCommand": "c",
+    "nim.lintOnSave": true,
+    "nim.project": [],
+    "nim.licenseString": "# Copyright 2019 XXXXXXXXX.nn",
+    "C_Cpp.intelliSenseEngine": "Default",
+}
