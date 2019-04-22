@@ -1,12 +1,13 @@
 
-import types, ivory
+import types
 
 # Defines a distinct type to be different from the other uses of uint32, but automatically converted to uint32
 type
   VM_Address* = distinct uint32
 
-converter toU32(vma: VM_Address): uint32 = result = vma.uint32
-converter toI32(vma: VM_Address): int32 = result = vma.int32
+# return type should be the same as aboove
+proc toIndex* (vma: VM_Address): uint32 = result = vma.uint32
+proc `+`* (vma1, vma2: VM_Address): VM_Address {.borrow.}
 
 const
   # size reflects 'count from 0' array indices
@@ -25,12 +26,25 @@ const
   QuantumSize* = 1 shl AddressQuantumShift
 
 
-  ####################################################################################################################
-  ##
-  ## Virtual memory attributes
-  ##
-  ####################################################################################################################
+type
+  VM_PageNumber* = uint32
 
+  VM_PageData* = array[PageSize, LO_Content]
+  VM_PageTag* = array[PageSize, LO_Tag]
+
+
+proc addressPageNumber *(vma: VM_Address): VM_PageNumber =
+  return (toIndex(vma) shr (PageAddressShift)).VM_PageNumber
+
+
+
+####################################################################################################################
+##
+## Virtual memory attributes
+##
+####################################################################################################################
+
+const
   VMAttribute_AccessFault*: uint8 = 0b00000001
   VMAttribute_WriteFault*: uint8 = 0b00000010
   VMAttribute_TransportFault*: uint8 = 0b00000100
@@ -43,12 +57,13 @@ const
       VMAttributeTransportFault or VMAttributeExists)
 
 
-  ####################################################################################################################
-  ##
-  ## Memory reading cycles
-  ##
-  ####################################################################################################################
+####################################################################################################################
+##
+## Memory reading cycles
+##
+####################################################################################################################
 
+const
   Cycle_DataRead*: uint8 = 0
   Cycle_DataWrite*: uint8 = 1
   Cycle_BindRead*: uint8 = 2
@@ -63,12 +78,13 @@ const
   Cycle_Raw*: uint8 = 11
   Cycle_RawTranslate*: uint8 = 12
 
-  ####################################################################################################################
-  ##
-  ## FIXME What are those?
-  ##
-  ####################################################################################################################
+####################################################################################################################
+##
+## FIXME What are those?
+##
+####################################################################################################################
 
+const
   MemoryAction_None*: uint8 = 0b000000
   MemoryAction_Indirect*: uint8 = 0b000001
   MemoryAction_Monitor*: uint8 = 0b000010
@@ -76,12 +92,3 @@ const
   MemoryAction_Trap*: uint8 = 0b001000
   MemoryAction_Transform*: uint8 = 0b010000
   MemoryAction_Binding*: uint8 = 0b100000
-
-
-type
-  VM_PageNumber* = uint32
-
-proc addressPageNumber *(vma: VM_Address): VM_PageNumber =
-  return vma shr toU32(PageAddressShift)
-
-
