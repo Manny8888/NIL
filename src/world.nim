@@ -79,3 +79,4 @@ type
     nMergedUnwiredMapEntries*: uint # FIXME # As above but after merging with parent worlds
     mergedUnwiredMapEntries*: seq[LoadMapEntry] # ..
 
+

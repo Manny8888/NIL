@@ -5,4 +5,5 @@
     "nim.project": [],
     "nim.licenseString": "# Copyright 2019 XXXXXXXXX.nn",
     "C_Cpp.intelliSenseEngine": "Default",
+    "rust.all_features": true,
 }

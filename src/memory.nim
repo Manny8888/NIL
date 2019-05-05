@@ -5,7 +5,9 @@ import types
 type
   VM_Address* = distinct uint32
 
+
 # return type should be the same as aboove
+converter toU32 *(vma: VM_Address): uint32 = result = vma.uint32
 proc toIndex* (vma: VM_Address): uint32 = result = vma.uint32
 proc `+`* (vma1, vma2: VM_Address): VM_Address {.borrow.}
 

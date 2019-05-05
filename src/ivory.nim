@@ -6,10 +6,10 @@ const
 
 
 type
-  Ivory* = object
+  Ivory* = object of RootObj
     processor*: CPU
-    tagSpace*: array[0 .. Memory_TotalSize, LO_Tag]
-    dataSpace*: array[0 .. Memory_TotalSize, LO_Content]
+    tagSpace*: array[Memory_TotalSize, LO_Tag]
+    dataSpace*: array[Memory_TotalSize, LO_Content]
 
 
 proc VM_Read *(m: var Ivory, vma: VM_Address): LispObject =
