@@ -47,9 +47,9 @@ type
 
 
 # Description of an open world file
-  World* = object
+  World* = ref object
     pathname*: string         # -> Pathname of the world file
-    fd*: File                 # Unix filedes # if the world file is open
+    fd*: File                 # Unix file descriptor if the world file is open
     format: uint # FIXME # A LoadFileFormat indicating the type of file
     isByteSwapped: bool       # World is byte swapped on this machine (VLM only)
     vlmDataPageBase*: VM_PageNumber # Block number of first page of data (VLM only)

@@ -1,2 +1,5 @@
 bin/*
+tools/*
 
+.vscode/tasks.json
+.#.#*

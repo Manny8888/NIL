@@ -46,6 +46,23 @@
                 "reveal": "always",
                 "panel": "dedicated"
             }
+        },
+        {
+            "label": "Run module.nim",
+            "command": "nim",
+            "args": [
+                "c",
+                "-r",
+                "module.nim"
+            ],
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

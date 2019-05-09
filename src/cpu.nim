@@ -18,7 +18,7 @@ type
     operand: uint32
     nextCacheLine: ref InstructionCacheLine
 
-  CPU* = object
+  CPU* = ref object
     SP: VM_Address
     RestartsP: VM_Address
     FP: VM_Address
