@@ -41,10 +41,6 @@
             ],
             "options": {
                 "cwd": "${workspaceRoot}/src"
-            },
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated"
             }
         },
         {

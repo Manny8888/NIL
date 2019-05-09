@@ -1,5 +1,9 @@
-#
+####################################################################################################################
+##
 # Defines various types such as lisp objects variants
+##
+####################################################################################################################
+
 
 import constants
 
@@ -12,8 +16,8 @@ import constants
 ## Type declaration
 #######################################
 
-# tags are stored as 32 bits for the moment, although uint8 would be enough
-# (declared as type alias, e.g. newtype in Haskell)
+# tags are stored as 8 bits for the moment
+
 type
   LO_Tag* = uint8
   LO_Data_Unsigned* = distinct uint32

@@ -1,4 +1,11 @@
-import memory
+####################################################################################################################
+##
+# Manipulation of WORLD file
+##
+####################################################################################################################
+
+
+import memory, types 
 
 # Common world format format definitions
 const
@@ -32,6 +39,13 @@ const
   VLMWorldFileV2FirstSysoutQ* = 3
   VLMWorldFileV2FirstMapQ* = 8
 
+type
+  SaveWorldEntry = object
+    startAddress: VM_Address # VMA of data (usually a region) to be saved
+    wordCount: VM_Address # Number of words starting at this address to save
+
+  SaveWorldData = object
+    pathnameString:  # Pathname of the world file (a DTP-STRING)
 
 var isLittleEndian: bool = true
 
@@ -39,11 +53,17 @@ var isLittleEndian: bool = true
 
 type
   LoadMapEntry = object
-    address*: VM_Address      # VMA to be filled in by this load map entry
+    loadAddress*: VM_Address  # VMA to be filled in by this load map entry
     count*: VM_Address # FIXME  = 24.VM_Address # Number of words to be filled in by this entry
     opcode*: uint # FIXME  = 8 # An LoadMapEntryOpcode specifying how to do so
     data*: VM_PageData        # FIXME # Interpretation is based on the opcode
-    world*: ref World # -> World from which this entry was obtained 
+    world*: ref World         # -> World from which this entry was obtained
+
+  LoadMapEntryOpCode = enum
+    LoadMapDataPages          # Load data pages from the file
+    LoadMapConstant           # Store a constant into memory
+    LoadMapConstantIncremented # Store an auto-incrementing constant into memory
+    LoadMapCopy # Copy an existing piece of memory 
 
 
 # Description of an open world file
@@ -56,7 +76,7 @@ type
     vlmTagsPageBase*: VM_PageNumber # Block number of first page of tags (VLM only)
     vlmDataPage*: VM_PageData # -> The data of the current VLM format page
     vlmTagPage*: VM_PageTag # -> The tags of the current VLM format page 
-    # FIXMEbyte *ivoryDataPage* :  # -> The data of the current Ivory format page
+    # FIXME byte *ivoryDataPage* :  # -> The data of the current Ivory format page
     currentPageNumber*: VM_PageNumber # Page number of the page in the buffer, if any
     currentQNumber*: uint     # FIXME # Q number within the page to be read
 
