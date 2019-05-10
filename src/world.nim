@@ -5,18 +5,21 @@
 ####################################################################################################################
 
 
-import memory, types 
+import memory, types
 
 # Common world format format definitions
 const
   VersionAndArchitectureQ* = 0
 
-# VLM world file format definitions
-const
+  # VLM world file format definitions
+  # Note: the magic numbers were defined in octal in the original sources
+  VLMWorldFileMagic*: array[4, uint8] =
+    [0xA3.uint8, 0x8A.uint8, 0x89.uint8, 0x88.uint8]
+  VLMWorldFileMagicSwapped*: array[4, uint8] =
+    [0x88.uint8, 0x89.uint8, 0x8A.uint8, 0xA3.uint8]
+
   VLMWorldSuffix* = ".vlod"
 
-  VLMWorldFileCookie* = 0xA38A8988
-  VLMWorldFileCookieSwapped* = 0x88898AA3
   VLMPageSizeQs* = 0x2000
   VLMBlockSize* = 0x2000
   VLMBlocksPerDataPage* = 4
@@ -41,25 +44,27 @@ const
 
 type
   SaveWorldEntry = object
-    startAddress: VM_Address # VMA of data (usually a region) to be saved
+    startAddress: VM_Address  # VMA of data (usually a region) to be saved
     wordCount: VM_Address # Number of words starting at this address to save
 
-  SaveWorldData = object
-    pathnameString:  # Pathname of the world file (a DTP-STRING)
+  # SaveWorldData = object
+  #   pathnameString: string # Pathname of the world file (a DTP-STRING)
 
-var isLittleEndian: bool = true
+
+var
+  isLittleEndian*: bool = true
 
 # A single load map entry -- See SYS:NETBOOT;WORLD-SUBSTRATE.LISP for details
 
 type
-  LoadMapEntry = object
+  LoadMapEntry* = object
     loadAddress*: VM_Address  # VMA to be filled in by this load map entry
     count*: VM_Address # FIXME  = 24.VM_Address # Number of words to be filled in by this entry
     opcode*: uint # FIXME  = 8 # An LoadMapEntryOpcode specifying how to do so
     data*: VM_PageData        # FIXME # Interpretation is based on the opcode
     world*: ref World         # -> World from which this entry was obtained
 
-  LoadMapEntryOpCode = enum
+  LoadMapEntryOpCode* = enum
     LoadMapDataPages          # Load data pages from the file
     LoadMapConstant           # Store a constant into memory
     LoadMapConstantIncremented # Store an auto-incrementing constant into memory
@@ -70,8 +75,8 @@ type
   World* = ref object
     pathname*: string         # -> Pathname of the world file
     fd*: File                 # Unix file descriptor if the world file is open
-    format: uint # FIXME # A LoadFileFormat indicating the type of file
-    isByteSwapped: bool       # World is byte swapped on this machine (VLM only)
+    format*: uint # FIXME # A LoadFileFormat indicating the type of file
+    isByteSwapped*: bool      # World is byte swapped on this machine (VLM only)
     vlmDataPageBase*: VM_PageNumber # Block number of first page of data (VLM only)
     vlmTagsPageBase*: VM_PageNumber # Block number of first page of tags (VLM only)
     vlmDataPage*: VM_PageData # -> The data of the current VLM format page
@@ -99,4 +104,37 @@ type
     nMergedUnwiredMapEntries*: uint # FIXME # As above but after merging with parent worlds
     mergedUnwiredMapEntries*: seq[LoadMapEntry] # ..
 
+# Returns true/false if everything is OK or not.
+# If OK returns a valid world structure
+proc loadWorld* (path: string): (bool, World) =
+  var
+    wFile: File
+    w = new(World)
+    isOK: bool
+    fileResult: int
+    magicNumber: array[4, uint8]
+
+  w.pathname = path
+  if open(wFile, w.pathname) == false:
+    echo "Error opening the world file"
+    return (false, w)
+
+  if readBytes(wFile, magicNumber, 0, 4) < 4:
+    echo "Magic number: read less than 4 bytes"
+    return (false, w)
+  else:
+    echo "Read magic number"
+    echo magicNumber
+
+  if magicNumber == VLMWorldFileMagic:
+    isLittleEndian = false
+    echo "Magic number: OK"
+  elif magicNumber == VLMWorldFileMagicSwapped:
+    isLittleEndian = true
+    echo "Magic number: Swapped"
+  else:
+    echo "Cannot recognise the magic number"
+    return (false, w)
+
+  return (true, w)
 

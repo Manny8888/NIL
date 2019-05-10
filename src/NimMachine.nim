@@ -1,5 +1,20 @@
-# This is just an example to get you started. A typical binary package
-# uses this file as the main entry point of the application.
 
-when isMainModule:
-  echo("Hello, World!")
+import world
+
+
+const
+  worldFileName: string = "../Genera-8-5-xlib-patched.vlod" # FIXME: hardcoded for the moment - should be an option or
+                                                             # a file chooser window
+
+echo "Start with world file:"
+echo worldFileName
+flushFile(stdout)
+
+var
+  isOK: bool
+  currentWorld: World
+
+(isOK, currentWorld) = loadWorld(worldFileName)
+
+
+
