@@ -5,7 +5,7 @@
 ####################################################################################################################
 
 
-import memory, types
+import memory, types, logging, globalstate
 
 # Common world format format definitions
 const
@@ -42,6 +42,13 @@ const
   VLMWorldFileV2FirstSysoutQ* = 3
   VLMWorldFileV2FirstMapQ* = 8
 
+  IvoryPageSizeBytes* = 1280
+  IvoryWorldFileWiredCountQ* = 1
+  IvoryWorldFileUnwiredCountQ* = 2
+  IvoryWorldFileFirstSysoutQ* = 0
+  IvoryWorldFileFirstMapQ* = 8
+
+
 type
   SaveWorldEntry = object
     startAddress: VM_Address  # VMA of data (usually a region) to be saved
@@ -72,7 +79,7 @@ type
 
 
 # Description of an open world file
-  World* = ref object
+  World* = object
     pathname*: string         # -> Pathname of the world file
     fd*: File                 # Unix file descriptor if the world file is open
     format*: uint # FIXME # A LoadFileFormat indicating the type of file
@@ -80,8 +87,8 @@ type
     vlmDataPageBase*: VM_PageNumber # Block number of first page of data (VLM only)
     vlmTagsPageBase*: VM_PageNumber # Block number of first page of tags (VLM only)
     vlmDataPage*: VM_PageData # -> The data of the current VLM format page
-    vlmTagPage*: VM_PageTag # -> The tags of the current VLM format page 
-    # FIXME byte *ivoryDataPage* :  # -> The data of the current Ivory format page
+    vlmTagPage*: VM_PageTag   # -> The tags of the current VLM format page
+    ivoryDataPage*: array[IvoryPageSizeBytes, uint8] # -> The data of the current Ivory format page
     currentPageNumber*: VM_PageNumber # Page number of the page in the buffer, if any
     currentQNumber*: uint     # FIXME # Q number within the page to be read
 
@@ -104,37 +111,75 @@ type
     nMergedUnwiredMapEntries*: uint # FIXME # As above but after merging with parent worlds
     mergedUnwiredMapEntries*: seq[LoadMapEntry] # ..
 
+
+# Read the specified page from the world file using Ivory file format settings
+proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
+
+  if isNil(w.fd):
+    log(consoleLog, lvlFatal,
+        "Read Ivory File Page: No file descriptor in world definition")
+    return false
+
+  if (w.currentPageNumber == pageNumber):
+    log(consoleLog, lvlInfo, "Loading page " & $pageNumber &
+        " from world file: Page already loaded.")
+    return true
+
+  setFilePos(w.fd, (pageNumber * IvoryPageSizeBytes - 1), fspSet)
+  if readBytes(w.fd, w.ivoryDataPage, 0,
+      IvoryPageSizeBytes) < IvoryPageSizeBytes:
+    echo "Loading page " & $pageNumber &
+        " from world file: Error - could not read enough bytes."
+    return false
+
+  w.currentPageNumber = pageNumber
+  return true
+
+
 # Returns true/false if everything is OK or not.
 # If OK returns a valid world structure
-proc loadWorld* (path: string): (bool, World) =
+proc openWorldFile* (path: string): (bool, World) =
   var
     wFile: File
-    w = new(World)
+    w: World
     isOK: bool
     fileResult: int
     magicNumber: array[4, uint8]
 
+  # Open the world file
   w.pathname = path
+  log(consoleLog, lvlInfo, "Opening world file " & path)
   if open(wFile, w.pathname) == false:
-    echo "Error opening the world file"
+    log(consoleLog, lvlFatal, "Error opening the world file")
     return (false, w)
+  w.fd = wFile
 
+
+  # Check the magic number and corresponding endianness
+  log(consoleLog, lvlInfo, "Reading magic number")
   if readBytes(wFile, magicNumber, 0, 4) < 4:
-    echo "Magic number: read less than 4 bytes"
+    log(consoleLog, lvlFatal, "Magic number: read less than 4 bytes")
     return (false, w)
-  else:
-    echo "Read magic number"
-    echo magicNumber
 
   if magicNumber == VLMWorldFileMagic:
     isLittleEndian = false
-    echo "Magic number: OK"
+    log(consoleLog, lvlInfo, "Magic number " & $magicNumber &
+        " is big-endian.")
   elif magicNumber == VLMWorldFileMagicSwapped:
     isLittleEndian = true
-    echo "Magic number: Swapped"
+    log(consoleLog, lvlInfo, "Magic number " & $magicNumber &
+        " is little-endian (swapped).")
   else:
-    echo "Cannot recognise the magic number"
+    log(consoleLog, lvlFatal, "Magic number is not recognised.")
     return (false, w)
+
+  # The header and load maps for both VLM and Ivory world files are stored using Ivory file format settings 
+  # (i.e., 56 s per 1280 byte page)
+  log(consoleLog, lvlInfo, "Loading page 0.")
+  w.currentPageNumber = -1
+  if not(readIvoryWorldFilePage(w, 0.VM_PageNumber)):
+    log(consoleLog, lvlFatal, "Page 0 not loaded.")
+    return(false, w)
 
   return (true, w)
 

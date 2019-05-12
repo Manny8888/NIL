@@ -12,11 +12,11 @@ import types
 type
   VM_Address* = distinct uint32
 
-
 # return type should be the same as aboove
 converter toU32 *(vma: VM_Address): uint32 = result = vma.uint32
 proc toIndex* (vma: VM_Address): uint32 = result = vma.uint32
 proc `+`* (vma1, vma2: VM_Address): VM_Address {.borrow.}
+
 
 const
   # size reflects 'count from 0' array indices
@@ -36,11 +36,13 @@ const
 
 
 type
-  VM_PageNumber* = uint32
+  VM_PageNumber* = int32
 
   VM_PageData* = array[PageSize, LO_Content]
   VM_PageTag* = array[PageSize, LO_Tag]
 
+converter toI32*(vpn: VM_PageNumber): int32 = result = vpn.int32
+converter toI64*(vpn: VM_PageNumber): int64 = result = vpn.int64
 
 proc addressPageNumber *(vma: VM_Address): VM_PageNumber =
   return (toIndex(vma) shr (PageAddressShift)).VM_PageNumber
