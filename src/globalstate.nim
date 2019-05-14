@@ -1,5 +1,8 @@
 
 import logging
 
-var consoleLog* = newConsoleLogger()
+var
+  isLittleEndian*: bool = true
+
+  consoleLog* = newConsoleLogger()
 
