@@ -21,8 +21,14 @@ import constants
 const
   # Just to be explicit in pointer calculations
   # And maybe one day allow for more tags and 64-bit lisp machines......
-  tagSizeInBytes*: uint32 = 1
+  # The size in bits needs to be enough to store all the bits.
+  dataSizeInBits*: uint32 = 28
   dataSizeInBytes*: uint32 = 4
+  dataSizeMask*: uint32 = 0b0000_1111_1111_1111_1111_1111_1111_1111.uint32
+
+  tagSizeInBits*: uint32 = 32.uint32 - dataSizeInBits
+  tagSizeInBytes*: uint32 = 1
+  tagSizeMask*: uint32 = 0b1111_0000_0000_0000_0000_0000_0000_0000.uint32
 
 type
   # Those types reflects the sizes just above

@@ -30,16 +30,16 @@ const
   VLMTagsPageSizeBytes* = VLMPageSizeQs
 
   VLMVersion1AndArchitecture*: LO_Data_Unsigned = 0o40000200.LO_Data_Unsigned
-  VLMWorldFileV1WiredCountQ*: uint32 = 1
+  VLMWorldFileV1WiredCountQ*: VM_Address = 1.VM_Address
   VLMWorldFileV1UnwiredCountQ*: uint32 = 0
-  VLMWorldFileV1PageBasesQ*: uint32 = 3
+  VLMWorldFileV1PageBasesQ*: VM_Address = 3.VM_Address
   VLMWorldFileV1FirstSysoutQ*: uint32 = 0
   VLMWorldFileV1FirstMapQ*: uint32 = 8
 
   VLMVersion2AndArchitecture*: LO_Data_Unsigned = 0o40000201.LO_Data_Unsigned
-  VLMWorldFileV2WiredCountQ*: uint32 = 1
+  VLMWorldFileV2WiredCountQ*: VM_Address = 1.VM_Address
   VLMWorldFileV2UnwiredCountQ*: uint32 = 0
-  VLMWorldFileV2PageBasesQ*: uint32 = 2
+  VLMWorldFileV2PageBasesQ*: VM_Address = 2.VM_Address
   VLMWorldFileV2FirstSysoutQ*: uint32 = 3
   VLMWorldFileV2FirstMapQ*: uint32 = 8
 
@@ -119,7 +119,6 @@ proc readAndSwap*(w: var World,
                   byteArray: var openArray[uint8], # array for bytes from which to read
                   address: uint32): LO_Data_Unsigned =
   var
-    temp1, temp2: uint32
     returnValue: uint32
     i: uint32 = 0
     shiftSize: uint32 = 0
@@ -292,7 +291,8 @@ proc openWorldFile* (path: string): (bool, World) =
   log(consoleLog, lvlInfo, fmt"Version is: {q.data.u:#X}")
 
   var
-    wiredCountQ, unwiredCountQ, pagesBaseQ, firstSysoutQ, firstMapQ: uint32
+    unwiredCountQ, firstSysoutQ, firstMapQ: uint32
+    wiredCountQ, pagesBaseQ: VM_Address
 
   case q.data.u:
   of VLMVersion1AndArchitecture:
@@ -314,7 +314,7 @@ proc openWorldFile* (path: string): (bool, World) =
     return(false, w)
 
 
-  if not(readIvoryWorldFileQ(w, wiredCountQ.VM_Address, q)):
+  if not(readIvoryWorldFileQ(w, wiredCountQ, q)):
     log(consoleLog, lvlFatal, "Cannot read wiredCountQ.")
     return(false, w)
   w.nWiredMapEntries = q
@@ -322,10 +322,29 @@ proc openWorldFile* (path: string): (bool, World) =
   # NOTE: No memory allocation of nWiredMapEntries since defined as a sequence
   # NOTE: No memoty allocation of nUnwiredMapEntries since unwiredCountQ is defined as 0
 
-  if not(readIvoryWorldFileQ(w, pagesBaseQ.VM_Address, q)):
+  if not(readIvoryWorldFileQ(w, pagesBaseQ, q)):
     log(consoleLog, lvlFatal, "Cannot read Page Base")
   pageBases = data(q)
   log(consoleLog, lvlInfo, fmt"Page Base = {pageBases.u:#X}")
+
+  w.vlmDataPageBase = (pageBases.u.uint32 and
+      dataSizeMask.uint32).VM_PageNumber
+  w.vlmTagsPageBase = ((pageBases.u.uint32 and
+      tagSizeMask) shr dataSizeInBits).VM_PageNumber
+
+  log(consoleLog, lvlInfo, fmt"Page Base data value = {w.vlmDataPageBase:#X}")
+  log(consoleLog, lvlInfo, fmt"Page Base tag value = {w.vlmTagsPageBase:#X}")
+
+
+  if firstSysoutQ==0:
+    w.sysoutGeneration = 0
+    w.sysoutTimestamp1 = 0
+    w.sysoutTimestamp2 = 0
+    w.sysoutParentTimestamp1 = 0
+    w.sysoutParentTimestamp2 = 0
+  else:
+    
+
 
 
 
