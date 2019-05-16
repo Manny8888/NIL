@@ -10,22 +10,43 @@ import types
 
 # Defines a distinct type to be different from the other uses of uint32, but automatically converted to uint32
 type
-  VM_Address* = distinct uint32
+  VM_AddressOLD* = distinct uint32
 
 # return type should be the same as aboove
-converter toU32 *(vma: VM_Address): uint32 = result = vma.uint32
-proc toIndex* (vma: VM_Address): uint32 = result = vma.uint32
-proc `+`* (vma1, vma2: VM_Address): VM_Address {.borrow.}
-proc `$`*(vma: VM_Address): string = fmt"{vma:#X}"
+converter toU32 *(vma: VM_AddressOLD): uint32 = result = vma.uint32
+proc toIndex* (vma: VM_AddressOLD): uint32 = result = vma.uint32
+proc `+`* (vma1, vma2: VM_AddressOLD): VM_AddressOLD {.borrow.}
+proc `-`* (vma1, vma2: VM_AddressOLD): VM_AddressOLD {.borrow.}
+proc `$`*(vma: VM_AddressOLD): string = fmt"{vma:#X}"
+
+type
+  QAddress* = distinct uint32
+
+# return type should be the same as aboove
+converter toU32 *(vma: QAddress): uint32 = result = vma.uint32
+proc toIndex* (vma: QAddress): uint32 = result = vma.uint32
+proc `+`* (vma1, vma2: QAddress): QAddress {.borrow.}
+proc `-`* (vma1, vma2: QAddress): QAddress {.borrow.}
+proc `$`*(vma: QAddress): string = fmt"{vma:#X}"
+
+type
+  ByteAddress* = distinct uint32
+
+# return type should be the same as aboove
+converter toU32 *(vma: ByteAddress): uint32 = result = vma.uint32
+proc toIndex* (vma: ByteAddress): uint32 = result = vma.uint32
+proc `+`* (vma1, vma2: ByteAddress): ByteAddress {.borrow.}
+proc `-`* (vma1, vma2: ByteAddress): ByteAddress {.borrow.}
+proc `$`*(vma: ByteAddress): string = fmt"{vma:#X}"
 
 
 const
   # size reflects 'count from 0' array indices
-  Memory_TotalSize*: VM_Address = ((1 shl 32) - 1).VM_Address
+  Memory_TotalSize*: QAddress = ((1 shl 32) - 1).QAddress
 
   # Page size is 13 bits = 0x2000 = 8,192
   MemoryPage_AddressShift*: uint8 = 13
-  MemoryPage_Size*: VM_Address = (1 shl 13).VM_Address
+  MemoryPage_Size*: ByteAddress = (1 shl 13).ByteAddress
 
   PageSize* = 0x100
   PageNumberMask* = 0xffffff00
@@ -47,7 +68,8 @@ converter toU32*(vpn: VM_PageNumber): uint32 = result = vpn.uint32
 converter toI64*(vpn: VM_PageNumber): int64 = result = vpn.int64
 proc `$`*(vpn: VM_PageNumber): string = fmt"{vpn:#X}"
 
-proc addressPageNumber *(vma: VM_Address): VM_PageNumber =
+# FIXME: Note sure if the type is the correct one
+proc addressPageNumber *(vma: ByteAddress): VM_PageNumber =
   return (toIndex(vma) shr (PageAddressShift)).VM_PageNumber
 
 

@@ -23,30 +23,30 @@ const
 
   VLMPageSizeQs* = 0x2000
   VLMBlockSize* = 0x2000
-  VLMBlocksPerDataPage* = 4
-  VLMBlocksPerTagsPage* = 1
+  VLMBlocksPerDataPage* = dataSizeInBytes
+  VLMBlocksPerTagsPage* = tagSizeInBytes
   VLMMaximumHeaderBlocks* = 14
   VLMDataPageSizeBytes* = 4 * VLMPageSizeQs
   VLMTagsPageSizeBytes* = VLMPageSizeQs
 
-  VLMVersion1AndArchitecture*: LO_Data_Unsigned = 0o40000200.LO_Data_Unsigned
-  VLMWorldFileV1WiredCountQ*: VM_Address = 1.VM_Address
+  VLMVersion1AndArchitecture*: LO_Data_Unsigned = 0x800080.LO_Data_Unsigned # 0o40000200
+  VLMWorldFileV1WiredCountQ*: QAddress = 1.QAddress
   VLMWorldFileV1UnwiredCountQ*: uint32 = 0
-  VLMWorldFileV1PageBasesQ*: VM_Address = 3.VM_Address
-  VLMWorldFileV1FirstSysoutQ*: uint32 = 0
+  VLMWorldFileV1PageBasesQ*: QAddress = 3.QAddress
+  VLMWorldFileV1FirstSysoutQ*: QAddress = 0.QAddress
   VLMWorldFileV1FirstMapQ*: uint32 = 8
 
-  VLMVersion2AndArchitecture*: LO_Data_Unsigned = 0o40000201.LO_Data_Unsigned
-  VLMWorldFileV2WiredCountQ*: VM_Address = 1.VM_Address
+  VLMVersion2AndArchitecture*: LO_Data_Unsigned = 0x800081.LO_Data_Unsigned # 0o40000200
+  VLMWorldFileV2WiredCountQ*: QAddress = 1.QAddress
   VLMWorldFileV2UnwiredCountQ*: uint32 = 0
-  VLMWorldFileV2PageBasesQ*: VM_Address = 2.VM_Address
-  VLMWorldFileV2FirstSysoutQ*: uint32 = 3
+  VLMWorldFileV2PageBasesQ*: QAddress = 2.QAddress
+  VLMWorldFileV2FirstSysoutQ*: QAddress = 3.QAddress
   VLMWorldFileV2FirstMapQ*: uint32 = 8
 
   # A page is 256 Q values stored on file as 256 uint32, 256 tags (as bytes)
-  IvoryPageSizeBytes*: uint32 = 256.uint32 * (
-      dataSizeInBytes+tagSizeInBytes).uint32
-  IvoryPageSizeQs*: uint32 = 256
+  IvoryPageSizeQs*: QAddress = 256.QAddress
+  IvoryPageSizeBytes*: uint32 = IvoryPageSizeQs.uint32 *
+                                (dataSizeInBytes+tagSizeInBytes).uint32
   IvoryWorldFileWiredCountQ* = 1
   IvoryWorldFileUnwiredCountQ* = 2
   IvoryWorldFileFirstSysoutQ* = 0
@@ -55,8 +55,8 @@ const
 
 type
   SaveWorldEntry = object
-    startAddress: VM_Address  # VMA of data (usually a region) to be saved
-    wordCount: VM_Address # Number of words starting at this address to save
+    startAddress: QAddress    # VMA of data (usually a region) to be saved
+    wordCount: QAddress # Number of words starting at this address to save
 
   # SaveWorldData = object
   #   pathnameString: string # Pathname of the world file (a DTP-STRING)
@@ -66,8 +66,8 @@ type
 
 type
   LoadMapEntry* = object
-    loadAddress*: VM_Address  # VMA to be filled in by this load map entry
-    count*: VM_Address # FIXME  = 24.VM_Address # Number of words to be filled in by this entry
+    loadAddress*: QAddress # FIXME: Not Sure about the type # VMA to be filled in by this load map entry
+    count*: QAddress # FIXME  = 24.VM_Address # Number of words to be filled in by this entry
     opcode*: uint # FIXME  = 8 # An LoadMapEntryOpcode specifying how to do so
     data*: VM_PageData        # FIXME # Interpretation is based on the opcode
     world*: ref World         # -> World from which this entry was obtained
@@ -91,14 +91,14 @@ type
     vlmTagPage*: VM_PageTag   # -> The tags of the current VLM format page
     ivoryDataPage*: array[IvoryPageSizeBytes, uint8] # -> The data of the current Ivory format page
     currentPageNumber*: VM_PageNumber # Page number of the page in the buffer, if any
-    currentqAddress*: uint    # FIXME # Q number within the page to be read
+    currentQAddress*: QAddress # Address of the Q within the current page to be read
 
     parentWorld*: ref World   # -> Parent of this world if it's an IDS
-    sysoutGeneration*: uint # FIXME  # Generation number of this world (> 0 if IDS)
-    sysoutTimestamp1*: uint64 # Unique ID of this world, part 1 ...
-    sysoutTimestamp2*: uint64 # ... part 2
-    sysoutParentTimestamp1*: uint64 # Unique ID of this world's parent, part 1 ...
-    sysoutParentTimestamp2*: uint64 # ... part 2
+    sysoutGeneration*: LO_Data_Unsigned # Generation number of this world (> 0 if IDS)
+    sysoutTimestamp1*: LO_Data_Unsigned # Unique ID of this world, part 1 ...
+    sysoutTimestamp2*: LO_Data_Unsigned # ... part 2
+    sysoutParentTimestamp1*: LO_Data_Unsigned # Unique ID of this world's parent, part 1 ...
+    sysoutParentTimestamp2*: LO_Data_Unsigned # ... part 2
 
     nWiredMapEntries*: LispQ
     wiredMapEntries*: seq[LoadMapEntry] # -> The wired load map entries
@@ -131,7 +131,7 @@ proc readAndSwap*(w: var World,
 
     returnValue = returnValue + (byteArray[i.int].uint32) shl shiftSize
 
-  log(consoleLog, lvlDebug, fmt"Value read at {address:#X} is {returnValue:#X}")
+  log(consoleLog, lvlDebug, fmt"{dataSizeInBytes}-byte value read from byte {address:#X} is {returnValue:#X}")
 
   return returnValue.LO_Data_Unsigned
 
@@ -163,15 +163,15 @@ proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
   return true
 
 
-
-proc readIvoryWorldFileQ*(w: var World, qAddress: VM_Address,
+# WARNING: Here, the caller provides a location to store the Q that will be read. 
+# The C code allocates a new Q within this function and returns a pointer to it.
+proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
                           q: var LispQ): bool =
 
-
-  log(consoleLog, lvlDebug, fmt"readIvoryWorldFileQ. Reading at address {qAddress} for world file {w.pathname}")
+  log(consoleLog, lvlDebug, fmt"readIvoryWorldFileQ. Reading at Q address {qAddress}")
 
   # Check the address to be loaded is within the size of the page
-  if (qAddress < 0) or (qAddress >= IvoryPageSizeQs.uint32):
+  if (qAddress < 0) or (qAddress >= IvoryPageSizeQs): # The negative test should not be neede, but who knows...
     log(consoleLog, lvlError,
         fmt"Invalid word number {qAddress} for world file {w.pathname}")
     return false
@@ -194,23 +194,24 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: VM_Address,
 
   var
     # tagSizeInBytes + dataSizeInBytes = 1 + 4 = 5
-    # extendedBaseAddress is in bytes not size of data Qs (normally 4 since uint32)
-    extendedBaseAddress: uint32 = (qAddress shr maskBits) *
-                                  (tagSizeInBytes + dataSizeInBytes)
-    lowBits: uint32 = qAddress and lowMask
+    # addressInBytes is in bytes not size of data Qs (normally 4 since uint32) - The C code uses pointer arithmetic instead
 
-    # FIXME: The 'x 4' akes no sense to me for the moment given the layout a few lines above
-    tagOffset = extendedBaseAddress + lowBits
-    pointerOffset = extendedBaseAddress + lowBits + 1
+    lowbits = qAddress and lowMask
+    addressInBytes: uint32 = (qAddress and highMask) *
+                             (tagSizeInBytes + dataSizeInBytes) +
+                             lowBits
+
+    # FIXME: The original C code 'x 4' makes no sense to me for the moment given the layout a few lines above
+    # However, pointerOffset is manipulated with pointer arithmetic where it is 4-byte long. That's the likely 
+    # explanation. But then again...
+    tagBytesOffset = addressInBytes * dataSizeInBytes
+    pointerBytesOffset = (addressInBytes + 1) * dataSizeInBytes
 
 
     tag: LO_Tag
     datum: LO_Data_Unsigned
 
-  log(consoleLog, lvlDebug, fmt"Extended address: {extendedBaseAddress:#X}")
-  log(consoleLog, lvlDebug, fmt"Low bits: {lowBits:#X}")
-  log(consoleLog, lvlDebug, fmt"Pointer offset: {pointerOffset:#X}")
-  log(consoleLog, lvlDebug, fmt"Tag offset: {tagOffset:#X}")
+  log(consoleLog, lvlDebug, fmt"Byte address: {addressInBytes:#X} --- Low bits: {lowBits:#X} --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
 
   # NOTE FROM THE ORIGINAL C CODE: 
   # The following code that byte reverses the tags isn't needed. I've 
@@ -223,11 +224,32 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: VM_Address,
   #  	tagOffset = 4 * 5 * (qAddress >> 2) + 3 - (qAddress & 3);
   #  #endif
 
-  tag = w.ivoryDataPage[tagOffset * dataSizeInBytes]
-  datum = readAndSwap(w, w.ivoryDataPage, pointerOffset * dataSizeInBytes)
+  tag = w.ivoryDataPage[tagBytesOffset]
+  datum = readAndSwap(w, w.ivoryDataPage, pointerBytesOffset)
   q.tag = tag
   q.data.u = datum
 
+  return true
+
+
+# Read the next Q from within the world file, advancing to the next page if needed, using Ivory file format settings
+proc readIvoryWorldFileNextQ(w: var World, q: var LispQ): bool =
+
+  log(consoleLog, lvlInfo, fmt"Reading next Q at address {w.currentQAddress}")
+  if w.currentQAddress >= IvoryPageSizeQs:
+    log(consoleLog, lvlInfo, fmt"Q address is beyond current page. Loading next page with number {w.currentPageNumber + 1}")
+    w.currentPageNumber = w.currentPageNumber + 1
+    w.currentQAddress = w.currentQAddress - IvoryPageSizeQs
+    var isOK = readIvoryWorldFilePage(w, w.currentPageNumber)
+    if not(isOK):
+      log(consoleLog, lvlFatal, fmt"Failed to read next page.")
+      return false
+
+  var isOK = readIvoryWorldFileQ(w, w.currentQAddress, q)
+  if not(isOK):
+    log(consoleLog, lvlFatal, fmt"Could not read Q at address {w.currentQAddress}")
+
+  w.currentQAddress = w.currentQAddress + 1.QAddress
   return true
 
 
@@ -285,14 +307,14 @@ proc openWorldFile* (path: string): (bool, World) =
 
   # Check VLM version
   log(consoleLog, lvlInfo, "Loading the version and architecture numbers.")
-  if not(readIvoryWorldFileQ(w, VersionAndArchitectureQ.VM_Address, q)):
+  if not(readIvoryWorldFileQ(w, VersionAndArchitectureQ.QAddress, q)):
     log(consoleLog, lvlFatal, "Cannot read version and architecture numbers.")
     return(false, w)
   log(consoleLog, lvlInfo, fmt"Version is: {q.data.u:#X}")
 
   var
-    unwiredCountQ, firstSysoutQ, firstMapQ: uint32
-    wiredCountQ, pagesBaseQ: VM_Address
+    unwiredCountQ, firstMapQ: uint32
+    wiredCountQ, pagesBaseQ, firstSysoutQ: QAddress
 
   case q.data.u:
   of VLMVersion1AndArchitecture:
@@ -337,13 +359,44 @@ proc openWorldFile* (path: string): (bool, World) =
 
 
   if firstSysoutQ==0:
-    w.sysoutGeneration = 0
-    w.sysoutTimestamp1 = 0
-    w.sysoutTimestamp2 = 0
-    w.sysoutParentTimestamp1 = 0
-    w.sysoutParentTimestamp2 = 0
+    w.sysoutGeneration = 0.LO_Data_Unsigned
+    w.sysoutTimestamp1 = 0.LO_Data_Unsigned
+    w.sysoutTimestamp2 = 0.LO_Data_Unsigned
+    w.sysoutParentTimestamp1 = 0.LO_Data_Unsigned
+    w.sysoutParentTimestamp2 = 0.LO_Data_Unsigned
   else:
-    
+    w.currentQAddress = firstSysoutQ
+
+    log(consoleLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
+    if not(readIvoryWorldFileNextQ(w, q)):
+      log(consoleLog, lvlFatal, fmt"Could not read sysOutGeneration.")
+
+    log(consoleLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
+    if not(readIvoryWorldFileNextQ(w, q)):
+      log(consoleLog, lvlFatal, fmt"Could not read sysOutGeneration.")
+    w.sysoutGeneration = q.data.u
+
+    log(consoleLog, lvlInfo, fmt"Reading sysOutTimeStamp1 at address {w.currentQAddress}")
+    if not(readIvoryWorldFileNextQ(w, q)):
+      log(consoleLog, lvlFatal, fmt"Could not read sysOutTimeStamp1.")
+    w.sysoutTimestamp1 = q.data.u
+
+    log(consoleLog, lvlInfo, fmt"Reading sysOutTimeStamp2 at address {w.currentQAddress}")
+    if not(readIvoryWorldFileNextQ(w, q)):
+      log(consoleLog, lvlFatal, fmt"Could not read sysOutTimeStamp2.")
+    w.sysoutTimestamp2 = q.data.u
+
+    log(consoleLog, lvlInfo, fmt"Reading sysOutParentTimeStamp1 at address {w.currentQAddress}")
+    if not(readIvoryWorldFileNextQ(w, q)):
+      log(consoleLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp1.")
+    w.sysoutParentTimestamp1 = q.data.u
+
+    log(consoleLog, lvlInfo, fmt"Reading sysOutParentTimeStamp2 at address {w.currentQAddress}")
+    if not(readIvoryWorldFileNextQ(w, q)):
+      log(consoleLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp2.")
+    w.sysoutParentTimestamp2 = q.data.u
+
+
 
 
 
