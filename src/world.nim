@@ -130,7 +130,7 @@ proc readAndSwap*(w: var World,
 
     returnValue = returnValue + (byteArray[i.int].uint32) shl shiftSize
 
-  log(consoleLog, lvlDebug, fmt"{dataSizeInBytes}-byte value read from byte {address:#X} is {returnValue:#X}")
+  log(ivoryPageReadLog, lvlDebug, fmt"{dataSizeInBytes}-byte value read from byte {address:#X} is {returnValue:#X}")
 
   return returnValue.QData
 
@@ -140,22 +140,22 @@ proc readAndSwap*(w: var World,
 proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
 
   if isNil(w.fd):
-    log(consoleLog, lvlFatal,
+    log(ivoryPageReadLog, lvlFatal,
         "Read Ivory File Page: No file descriptor in world definition")
     return false
 
   if (w.currentPageNumber == pageNumber):
-    log(consoleLog, lvlInfo, fmt"Loading page {$pageNumber:#X} from world file: Page already loaded.")
+    log(ivoryPageReadLog, lvlInfo, fmt"Loading page {$pageNumber:#X} from world file: Page already loaded.")
     return true
 
-  log(consoleLog, lvlDebug,
+  log(ivoryPageReadLog, lvlDebug,
       "Read Ivory File Page. Current file position is:" & $getFilePos(w.fd))
-  log(consoleLog, lvlDebug, "Read Ivory File Page. Seeking position:" &
+  log(ivoryPageReadLog, lvlDebug, "Read Ivory File Page. Seeking position:" &
       $(pageNumber * IvoryPageSizeBytes))
   setFilePos(w.fd, pageNumber * IvoryPageSizeBytes.int64, fspSet)
   if readBytes(w.fd, w.ivoryDataPage, 0,
       IvoryPageSizeBytes).uint32 < IvoryPageSizeBytes:
-    log(consoleLog, lvlFatal, fmt"Loading page {$pageNumber:#X} from world file. Could not read enough bytes.")
+    log(ivoryPageReadLog, lvlFatal, fmt"Loading page {$pageNumber:#X} from world file. Could not read enough bytes.")
     return false
 
   w.currentPageNumber = pageNumber
@@ -167,11 +167,11 @@ proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
 proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
                           q: var LispQ): bool =
 
-  log(consoleLog, lvlDebug, fmt"readIvoryWorldFileQ. Reading at Q address {qAddress}")
+  log(ivoryPageReadLog, lvlDebug, fmt"readIvoryWorldFileQ. Reading at Q address {qAddress}")
 
   # Check the address to be loaded is within the size of the page
   if (qAddress < 0) or (qAddress >= IvoryPageSizeQs): # The negative test should not be neede, but who knows...
-    log(consoleLog, lvlError,
+    log(ivoryPageReadLog, lvlError,
         fmt"Invalid word number {qAddress} for world file {w.pathname}")
     return false
 
@@ -210,7 +210,7 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
     tag: QTag
     datum: QData
 
-  log(consoleLog, lvlDebug, fmt"Byte address: {addressInBytes:#X} --- Low bits: {lowBits:#X} --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
+  log(ivoryPageReadLog, lvlDebug, fmt"Byte address: {addressInBytes:#X} --- Low bits: {lowBits:#X} --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
 
   # NOTE FROM THE ORIGINAL C CODE: 
   # The following code that byte reverses the tags isn't needed. I've 
@@ -234,19 +234,19 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
 # Read the next Q from within the world file, advancing to the next page if needed, using Ivory file format settings
 proc readIvoryWorldFileNextQ(w: var World, q: var LispQ): bool =
 
-  log(consoleLog, lvlInfo, fmt"Reading next Q at address {w.currentQAddress}")
+  log(ivoryPageReadLog, lvlInfo, fmt"Reading next Q at address {w.currentQAddress}")
   if w.currentQAddress >= IvoryPageSizeQs:
-    log(consoleLog, lvlInfo, fmt"Q address is beyond current page. Loading next page with number {w.currentPageNumber + 1}")
+    log(ivoryPageReadLog, lvlInfo, fmt"Q address is beyond current page. Loading next page with number {w.currentPageNumber + 1}")
     w.currentPageNumber = w.currentPageNumber + 1
     w.currentQAddress = w.currentQAddress - IvoryPageSizeQs
     var isOK = readIvoryWorldFilePage(w, w.currentPageNumber)
     if not(isOK):
-      log(consoleLog, lvlFatal, fmt"Failed to read next page.")
+      log(ivoryPageReadLog, lvlFatal, fmt"Failed to read next page.")
       return false
 
   var isOK = readIvoryWorldFileQ(w, w.currentQAddress, q)
   if not(isOK):
-    log(consoleLog, lvlFatal, fmt"Could not read Q at address {w.currentQAddress}")
+    log(ivoryPageReadLog, lvlFatal, fmt"Could not read Q at address {w.currentQAddress}")
 
   w.currentQAddress = w.currentQAddress + 1.QAddress
   return true
@@ -263,20 +263,20 @@ proc readLoadMap(w: var World,
     isOK: bool
 
   for i in 0..<nMapEntries:
-    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} of {nMapEntries}")
-    log(consoleLog, lvlInfo, fmt"readLoadMap: reading address {w.currentQAddress}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} of {nMapEntries}")
+    log(runLog, lvlInfo, fmt"readLoadMap: reading address {w.currentQAddress}")
 
     isOK = readIvoryWorldFileNextQ(w, q)
     # mapEntries[i].loadAddress = q.data.QAddress
-    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- Load address: {q}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- Load address: {q}")
 
     isOK = readIvoryWorldFileNextQ(w, q)
     # mapEntries[i].op = q.data.QAddress
-    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- opcode and count: {q}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- opcode and count: {q}")
 
     isOK = readIvoryWorldFileNextQ(w, q)
     # mapEntries[i].data = q
-    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- data: {q}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- data: {q}")
 
     # mapEntries[i].world = w
 
@@ -310,50 +310,50 @@ proc openWorldFile* (path: string): (bool, World) =
 
   # Open the world file
   w.pathname = path
-  log(consoleLog, lvlInfo, fmt"Opening world file {path}")
+  log(runLog, lvlInfo, fmt"Opening world file {path}")
   if open(wFile, w.pathname) == false:
-    log(consoleLog, lvlFatal, "Error opening the world file")
+    log(runLog, lvlFatal, "Error opening the world file")
     return (false, w)
   w.fd = wFile
-  log(consoleLog, lvlInfo,
+  log(runLog, lvlInfo,
       fmt"openWorldFile. Current file size is: {getFileSize(w.fd):#X} eq. to {getFileSize(w.fd)} bytes")
-  log(consoleLog, lvlInfo,
+  log(runLog, lvlInfo,
       fmt"openWorldFile. Current file position is: {getFilePos(w.fd):#X} eq. to {getFilePos(w.fd)}")
 
 
   # Check the magic number and corresponding endianness
-  log(consoleLog, lvlInfo, "Reading magic number")
+  log(runLog, lvlInfo, "Reading magic number")
   if readBytes(wFile, magicNumber, 0, 4) < 4:
-    log(consoleLog, lvlFatal, "Magic number: read less than 4 bytes")
+    log(runLog, lvlFatal, "Magic number: read less than 4 bytes")
     return (false, w)
 
   if magicNumber == VLMWorldFileMagic:
     isLittleEndian = false
-    log(consoleLog, lvlInfo,
+    log(runLog, lvlInfo,
         fmt"Magic number {magicNumber[0]:#X} {magicNumber[1]:#X} {magicNumber[2]:#X} {magicNumber[3]:#X} is big-endian.")
   elif magicNumber == VLMWorldFileMagicSwapped:
     isLittleEndian = true
-    log(consoleLog, lvlInfo,
+    log(runLog, lvlInfo,
         fmt"Magic number {magicNumber[0]:#X} {magicNumber[1]:#X} {magicNumber[2]:#X} {magicNumber[3]:#X} is little-endian (swapped).")
   else:
-    log(consoleLog, lvlFatal, "Magic number is not recognised.")
+    log(runLog, lvlFatal, "Magic number is not recognised.")
     return (false, w)
 
   # The header and load maps for both VLM and Ivory world files are stored using Ivory file format settings 
   # (i.e., 56 s per 1280 byte page)
-  log(consoleLog, lvlInfo, "Loading page 0.")
+  log(runLog, lvlInfo, "Loading page 0.")
   w.currentPageNumber = -1
   if not(readIvoryWorldFilePage(w, 0.VM_PageNumber)):
-    log(consoleLog, lvlFatal, "Page 0 not loaded.")
+    log(runLog, lvlFatal, "Page 0 not loaded.")
     return(false, w)
 
 
   # Check VLM version
-  log(consoleLog, lvlInfo, "Loading the version and architecture numbers.")
+  log(runLog, lvlInfo, "Loading the version and architecture numbers.")
   if not(readIvoryWorldFileQ(w, VersionAndArchitectureQ.QAddress, q)):
-    log(consoleLog, lvlFatal, "Cannot read version and architecture numbers.")
+    log(runLog, lvlFatal, "Cannot read version and architecture numbers.")
     return(false, w)
-  log(consoleLog, lvlInfo, fmt"Version is: {q.data:#X}")
+  log(runLog, lvlInfo, fmt"Version is: {q.data:#X}")
 
   var
     unwiredCountQ: uint32
@@ -375,12 +375,12 @@ proc openWorldFile* (path: string): (bool, World) =
     firstMapQ = VLMWorldFileV2FirstMapQ;
 
   else:
-    log(consoleLog, lvlFatal, "Unknown version and architecture numbers.")
+    log(runLog, lvlFatal, "Unknown version and architecture numbers.")
     return(false, w)
 
 
   if not(readIvoryWorldFileQ(w, wiredCountQ, q)):
-    log(consoleLog, lvlFatal, "Cannot read wiredCountQ.")
+    log(runLog, lvlFatal, "Cannot read wiredCountQ.")
     return(false, w)
   w.nWiredMapEntries = q
 
@@ -388,17 +388,17 @@ proc openWorldFile* (path: string): (bool, World) =
   # NOTE: No memoty allocation of nUnwiredMapEntries since unwiredCountQ is defined as 0
 
   if not(readIvoryWorldFileQ(w, pagesBaseQ, q)):
-    log(consoleLog, lvlFatal, "Cannot read Page Base")
+    log(runLog, lvlFatal, "Cannot read Page Base")
   pageBases = data(q)
-  log(consoleLog, lvlInfo, fmt"Page Base = {pageBases:#X}")
+  log(runLog, lvlInfo, fmt"Page Base = {pageBases:#X}")
 
   w.vlmDataPageBase = (pageBases.uint32 and
       dataSizeMask.uint32).VM_PageNumber
   w.vlmTagsPageBase = ((pageBases.uint32 and
       tagSizeMask) shr dataSizeInBits).VM_PageNumber
 
-  log(consoleLog, lvlInfo, fmt"Page Base data value = {w.vlmDataPageBase:#X}")
-  log(consoleLog, lvlInfo, fmt"Page Base tag value = {w.vlmTagsPageBase:#X}")
+  log(runLog, lvlInfo, fmt"Page Base data value = {w.vlmDataPageBase:#X}")
+  log(runLog, lvlInfo, fmt"Page Base tag value = {w.vlmTagsPageBase:#X}")
 
 
   if firstSysoutQ==0:
@@ -410,34 +410,35 @@ proc openWorldFile* (path: string): (bool, World) =
   else:
     w.currentQAddress = firstSysoutQ
 
-    log(consoleLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
+    log(runLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
     if not(readIvoryWorldFileNextQ(w, q)):
-      log(consoleLog, lvlFatal, fmt"Could not read sysOutGeneration.")
-
-    log(consoleLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
-    if not(readIvoryWorldFileNextQ(w, q)):
-      log(consoleLog, lvlFatal, fmt"Could not read sysOutGeneration.")
+      log(runLog, lvlFatal, fmt"Could not read sysOutGeneration.")
     w.sysoutGeneration = q.data
+    log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(consoleLog, lvlInfo, fmt"Reading sysOutTimeStamp1 at address {w.currentQAddress}")
+
+    log(runLog, lvlInfo, fmt"Reading sysOutTimeStamp1 at address {w.currentQAddress}")
     if not(readIvoryWorldFileNextQ(w, q)):
-      log(consoleLog, lvlFatal, fmt"Could not read sysOutTimeStamp1.")
+      log(runLog, lvlFatal, fmt"Could not read sysOutTimeStamp1.")
     w.sysoutTimestamp1 = q.data
+    log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(consoleLog, lvlInfo, fmt"Reading sysOutTimeStamp2 at address {w.currentQAddress}")
+    log(runLog, lvlInfo, fmt"Reading sysOutTimeStamp2 at address {w.currentQAddress}")
     if not(readIvoryWorldFileNextQ(w, q)):
-      log(consoleLog, lvlFatal, fmt"Could not read sysOutTimeStamp2.")
+      log(runLog, lvlFatal, fmt"Could not read sysOutTimeStamp2.")
     w.sysoutTimestamp2 = q.data
+    log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(consoleLog, lvlInfo, fmt"Reading sysOutParentTimeStamp1 at address {w.currentQAddress}")
+    log(runLog, lvlInfo, fmt"Reading sysOutParentTimeStamp1 at address {w.currentQAddress}")
     if not(readIvoryWorldFileNextQ(w, q)):
-      log(consoleLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp1.")
+      log(runLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp1.")
     w.sysoutParentTimestamp1 = q.data
+    log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(consoleLog, lvlInfo, fmt"Reading sysOutParentTimeStamp2 at address {w.currentQAddress}")
+    log(runLog, lvlInfo, fmt"Reading sysOutParentTimeStamp2 at address {w.currentQAddress}")
     if not(readIvoryWorldFileNextQ(w, q)):
-      log(consoleLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp2.")
-    w.sysoutParentTimestamp2 = q.data
+      log(runLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp2.")
+    log(runLog, lvlInfo, fmt"value read = {q}")
 
 
   w.currentQAddress = firstMapQ

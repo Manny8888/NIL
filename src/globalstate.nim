@@ -4,5 +4,6 @@ import logging
 var
   isLittleEndian*: bool = true
 
-  consoleLog* = newFileLogger("runLog.log")
+  runLog* = newFileLogger("runLog.log")
+  ivoryPageReadLog* = newFileLogger("ivoryPageLog.log")
 
