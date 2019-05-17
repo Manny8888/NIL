@@ -316,9 +316,9 @@ proc openWorldFile* (path: string): (bool, World) =
     log(consoleLog, lvlFatal, "Error opening the world file")
     return (false, w)
   w.fd = wFile
-  log(consoleLog, lvlDebug,
+  log(consoleLog, lvlInfo,
       fmt"openWorldFile. Current file size is: {getFileSize(w.fd):#X} eq. to {getFileSize(w.fd)} bytes")
-  log(consoleLog, lvlDebug,
+  log(consoleLog, lvlInfo,
       fmt"openWorldFile. Current file position is: {getFilePos(w.fd):#X} eq. to {getFilePos(w.fd)}")
 
 

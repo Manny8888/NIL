@@ -4,6 +4,7 @@ src/NimMachine
 bin/*
 tools/*
 
+runLog.log
 .vscode/tasks.json
 *sync-conflict*
 .#.#*

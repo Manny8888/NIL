@@ -6,6 +6,7 @@
 
 
 import constants
+import strformat
 
 ####################################################################################################################
 # 
@@ -40,6 +41,10 @@ type
 converter toU32 *(value: LO_Data_Unsigned): uint32 = result = value.uint32
 converter toI32 *(value: LO_Data_Signed): int32 = result = value.int32
 converter toF32 *(value: LO_Data_Float): float32 = result = value.float32
+proc `$`* (v: LO_Data_Unsigned): string = $(v.uint32)
+proc `$`* (v: LO_Data_Signed): string = $(v.int32)
+proc `$`* (v: LO_Data_Float): string = $(v.float32)
+
 
 type
   LO_ContentKind* = enum
@@ -56,6 +61,12 @@ type
   LispQ* = object
     tag*: LO_Tag
     data*: LO_Content
+
+
+proc `$`* (q: LispQ): string =
+  # echo fmt"Q: tag = {q.tag:#X} / {q.tag:#b} --- data: u = {q.data.u:#X} / {q.data.u}  s = {q.data.s:#H} / {q.data.s}   f = {q.data.f}"
+  echo fmt"Q: tag = {q.tag:#X} / {q.tag:#b} --- data: u = {q.data.u:#X} / {q.data.u}"
+
 
 ## Constructor/setters/getters
 #######################################
