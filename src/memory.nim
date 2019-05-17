@@ -8,17 +8,9 @@
 import strformat
 import types
 
+
+####################################################################################################################
 # Defines a distinct type to be different from the other uses of uint32, but automatically converted to uint32
-type
-  VM_AddressOLD* = distinct uint32
-
-# return type should be the same as aboove
-converter toU32 *(vma: VM_AddressOLD): uint32 = result = vma.uint32
-proc toIndex* (vma: VM_AddressOLD): uint32 = result = vma.uint32
-proc `+`* (vma1, vma2: VM_AddressOLD): VM_AddressOLD {.borrow.}
-proc `-`* (vma1, vma2: VM_AddressOLD): VM_AddressOLD {.borrow.}
-proc `$`*(vma: VM_AddressOLD): string = fmt"{vma:#X}"
-
 type
   QAddress* = distinct uint32
 
@@ -29,6 +21,9 @@ proc `+`* (vma1, vma2: QAddress): QAddress {.borrow.}
 proc `-`* (vma1, vma2: QAddress): QAddress {.borrow.}
 proc `$`*(vma: QAddress): string = fmt"{vma:#X}"
 
+
+####################################################################################################################
+# Address specified in bytes - when reading a load band for example
 type
   ByteAddress* = distinct uint32
 
@@ -40,6 +35,7 @@ proc `-`* (vma1, vma2: ByteAddress): ByteAddress {.borrow.}
 proc `$`*(vma: ByteAddress): string = fmt"{vma:#X}"
 
 
+####################################################################################################################
 const
   # size reflects 'count from 0' array indices
   Memory_TotalSize*: QAddress = ((1 shl 32) - 1).QAddress

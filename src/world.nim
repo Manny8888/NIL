@@ -34,14 +34,14 @@ const
   VLMWorldFileV1UnwiredCountQ*: uint32 = 0
   VLMWorldFileV1PageBasesQ*: QAddress = 3.QAddress
   VLMWorldFileV1FirstSysoutQ*: QAddress = 0.QAddress
-  VLMWorldFileV1FirstMapQ*: uint32 = 8
+  VLMWorldFileV1FirstMapQ*: QAddress = 8.QAddress
 
   VLMVersion2AndArchitecture*: LO_Data_Unsigned = 0x800081.LO_Data_Unsigned # 0o40000200
   VLMWorldFileV2WiredCountQ*: QAddress = 1.QAddress
   VLMWorldFileV2UnwiredCountQ*: uint32 = 0
   VLMWorldFileV2PageBasesQ*: QAddress = 2.QAddress
   VLMWorldFileV2FirstSysoutQ*: QAddress = 3.QAddress
-  VLMWorldFileV2FirstMapQ*: uint32 = 8
+  VLMWorldFileV2FirstMapQ*: QAddress = 8.QAddress
 
   # A page is 256 Q values stored on file as 256 uint32, 256 tags (as bytes)
   IvoryPageSizeQs*: QAddress = 256.QAddress
@@ -65,18 +65,19 @@ type
 # A single load map entry -- See SYS:NETBOOT;WORLD-SUBSTRATE.LISP for details
 
 type
-  LoadMapEntry* = object
-    loadAddress*: QAddress # FIXME: Not Sure about the type # VMA to be filled in by this load map entry
-    count*: QAddress # FIXME  = 24.VM_Address # Number of words to be filled in by this entry
-    opcode*: uint # FIXME  = 8 # An LoadMapEntryOpcode specifying how to do so
-    data*: VM_PageData        # FIXME # Interpretation is based on the opcode
-    world*: ref World         # -> World from which this entry was obtained
-
   LoadMapEntryOpCode* = enum
     LoadMapDataPages          # Load data pages from the file
     LoadMapConstant           # Store a constant into memory
     LoadMapConstantIncremented # Store an auto-incrementing constant into memory
-    LoadMapCopy # Copy an existing piece of memory 
+    LoadMapCopy               # Copy an existing piece of memory
+
+  LoadMapEntry* = object
+    loadAddress*: QAddress    # VMA to be filled in by this load map entry
+    count*: QAddress # Number of words to be filled in by this entry. Specified as a 24-bit field originally
+    opcode*: LoadMapEntryOpCode # An LoadMapEntryOpcode specifying how to do so. Specified as an 8-bit field originally
+    data*: VM_PageData        # FIXME # Interpretation is based on the opcode
+    world*: ref World # -> World from which this entry was obtained
+
 
 
 # Description of an open world file
@@ -254,6 +255,49 @@ proc readIvoryWorldFileNextQ(w: var World, q: var LispQ): bool =
 
 
 
+# Read a load map from the world load file
+proc readLoadMap(w: var World,
+                 nMapEntries: uint32,
+                 mapEntries: var seq[LoadMapEntry]): bool =
+  var
+    q: LispQ
+    i: int
+    isOK: bool
+
+  for i in 0..<nMapEntries:
+    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} of {nMapEntries}")
+    log(consoleLog, lvlInfo, fmt"readLoadMap: reading address {w.currentQAddress}")
+
+    isOK = readIvoryWorldFileNextQ(w, q)
+    #mapEntries[i].loadAddress = q.data.u.QAddress
+    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- Load address: {q}")
+
+    isOK = readIvoryWorldFileNextQ(w, q)
+    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- opcode and count: {q}")
+
+
+    isOK = readIvoryWorldFileNextQ(w, q)
+    log(consoleLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- data: {q}")
+
+
+
+
+
+    # for ( i = 0; i < nMapEntries; i++, mapEntries++ )
+    # {
+    #     ReadIvoryWorldFileNextQ ( world, &q );
+    #     mapEntries->address = LispObjData ( q );
+
+    #     ReadIvoryWorldFileNextQ ( world, &q );
+    #     * ( Integer * ) ( &mapEntries->op ) = LispObjData ( q );
+    #     ReadIvoryWorldFileNextQ ( world, &q );
+    #     mapEntries->data = q;
+    #     mapEntries->world = world;
+    # }
+
+  return true
+
+
 # Returns true/false if everything is OK or not. If OK returns a valid world structure
 proc openWorldFile* (path: string): (bool, World) =
   var
@@ -313,8 +357,8 @@ proc openWorldFile* (path: string): (bool, World) =
   log(consoleLog, lvlInfo, fmt"Version is: {q.data.u:#X}")
 
   var
-    unwiredCountQ, firstMapQ: uint32
-    wiredCountQ, pagesBaseQ, firstSysoutQ: QAddress
+    unwiredCountQ: uint32
+    firstMapQ, wiredCountQ, pagesBaseQ, firstSysoutQ: QAddress
 
   case q.data.u:
   of VLMVersion1AndArchitecture:
@@ -397,8 +441,9 @@ proc openWorldFile* (path: string): (bool, World) =
     w.sysoutParentTimestamp2 = q.data.u
 
 
-
-
+  w.currentQAddress = firstMapQ
+  isOK = readLoadMap(w, w.nWiredMapEntries.data.u, w.wiredMapEntries)
+  isOK = readLoadMap(w, w.nUnwiredMapEntries.data.u, w.unwiredMapEntries)
 
 
   return (true, w)
