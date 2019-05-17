@@ -17,7 +17,7 @@ const
 type
   Ivory* = object of RootObj
     processor*: CPU
-    tagSpace*: array[Memory_TotalSize, LO_Tag]
+    tagSpace*: array[Memory_TotalSize, QTag]
     dataSpace*: array[Memory_TotalSize, LO_Content]
 
 

@@ -56,8 +56,8 @@ const
 type
   VM_PageNumber* = int32
 
-  VM_PageData* = array[PageSize, LO_Content]
-  VM_PageTag* = array[PageSize, LO_Tag]
+  VM_PageData* = array[PageSize, QData]
+  VM_PageTag* = array[PageSize, QTag]
 
 converter toI32*(vpn: VM_PageNumber): int32 = result = vpn.int32
 converter toU32*(vpn: VM_PageNumber): uint32 = result = vpn.uint32
