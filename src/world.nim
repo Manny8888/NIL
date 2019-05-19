@@ -8,6 +8,7 @@
 import math, strformat
 import memory, types, logging, globalstate
 
+
 # Common world format format definitions
 const
   VersionAndArchitectureQ* = 0
@@ -112,25 +113,28 @@ type
     mergedUnwiredMapEntries*: seq[LoadMapEntry] # ..
 
 
-
 # Read 4 bytes from a particular location and swaps the bytes as appropriate
-proc readAndSwap*(w: var World,
-                  byteArray: var openArray[uint8], # array for bytes from which to read
-                  address: uint32): QData =
+proc readAndSwap*(w: var World, byteArray: var openArray[uint8], # array for bytes from which to read
+                  address: uint64): QData =
   var
-    returnValue: uint32
-    i: uint32 = 0
-    shiftSize: uint32 = 0
+    returnValue: uint64
+    i: uint64 = 0
+    shiftSize: int = 0
 
-  for i in address.uint32 .. (address + dataSizeInBytes-1).uint32:
+  if isLittleEndian:
+    shiftSize = 0.int
+  else:
+    shiftSize = ((dataSizeInBytes - 1) * 8).int
+
+  for i in address .. (address + dataSizeInBytes-1).uint64:
+    returnValue = returnValue + (byteArray[i.int].uint64) shl shiftSize
+
     if isLittleEndian:
-      shiftSize = (i * 8).uint32
+      shiftSize = shiftSize + 8
     else:
-      shiftSize = ((dataSizeInBytes - i) * 8).uint32
+      shiftSize = shiftSize - 8
 
-    returnValue = returnValue + (byteArray[i.int].uint32) shl shiftSize
-
-  log(ivoryPageReadLog, lvlDebug, fmt"{dataSizeInBytes}-byte value read from byte {address:#X} is {returnValue:#X}")
+  log(ivoryPageReadLog, lvlInfo, fmt"{dataSizeInBytes}- byte value read from address (in byte) {address:#X} is {returnValue:#X}")
 
   return returnValue.QData
 
@@ -167,11 +171,11 @@ proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
 proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
                           q: var LispQ): bool =
 
-  log(ivoryPageReadLog, lvlDebug, fmt"readIvoryWorldFileQ. Reading at Q address {qAddress}")
+  log(ivoryPageReadLog, lvlInfo, fmt"readIvoryWorldFileQ. Attempting read at Q address {qAddress}")
 
   # Check the address to be loaded is within the size of the page
   if (qAddress < 0) or (qAddress >= IvoryPageSizeQs): # The negative test should not be neede, but who knows...
-    log(ivoryPageReadLog, lvlError,
+    log(ivoryPageReadLog, lvlFatal,
         fmt"Invalid word number {qAddress} for world file {w.pathname}")
     return false
 
@@ -188,15 +192,16 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
   #
   const
     maskBits = 2
-    lowMask = (2 ^ 2 - 1).uint32
-    highMask = (2 ^ 32 - 1).uint32 - lowMask
+    lowMask = (2 ^ maskBits - 1).uint64
+    highMask = (2 ^ (8 * dataSizeInBytes.int) - 1).uint64 - lowMask
 
   var
     # tagSizeInBytes + dataSizeInBytes = 1 + 4 = 5
-    # addressInBytes is in bytes not size of data Qs (normally 4 since uint32) - The C code uses pointer arithmetic instead
+    # addressInBytes is in bytes not size of data Qs (normally 4 since uint32) 
+    # The C code uses pointer arithmetic instead.
 
     lowbits = qAddress and lowMask
-    addressInBytes: uint32 = (qAddress and highMask) *
+    addressInBytes: uint64 = (qAddress and highMask) *
                              (tagSizeInBytes + dataSizeInBytes) +
                              lowBits
 
@@ -207,10 +212,7 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
     pointerBytesOffset = (addressInBytes + 1) * dataSizeInBytes
 
 
-    tag: QTag
-    datum: QData
-
-  log(ivoryPageReadLog, lvlDebug, fmt"Byte address: {addressInBytes:#X} --- Low bits: {lowBits:#X} --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
+  log(ivoryPageReadLog, lvlInfo, fmt"Byte address: {addressInBytes:#X} --- Low bits: {lowBits:#X} --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
 
   # NOTE FROM THE ORIGINAL C CODE: 
   # The following code that byte reverses the tags isn't needed. I've 
@@ -223,10 +225,8 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
   #  	tagOffset = 4 * 5 * (qAddress >> 2) + 3 - (qAddress & 3);
   #  #endif
 
-  tag = w.ivoryDataPage[tagBytesOffset]
-  datum = readAndSwap(w, w.ivoryDataPage, pointerBytesOffset)
-  q.tag = tag
-  q.data = datum
+  q.tag = w.ivoryDataPage[tagBytesOffset.uint32].QTag
+  q.data = readAndSwap(w, w.ivoryDataPage, pointerBytesOffset)
 
   return true
 
@@ -263,6 +263,7 @@ proc readLoadMap(w: var World,
     isOK: bool
 
   for i in 0..<nMapEntries:
+    log(runLog, lvlInfo, fmt"")
     log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} of {nMapEntries}")
     log(runLog, lvlInfo, fmt"readLoadMap: reading address {w.currentQAddress}")
 
@@ -278,9 +279,8 @@ proc readLoadMap(w: var World,
     # mapEntries[i].data = q
     log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- data: {q}")
 
-    # mapEntries[i].world = w
 
-
+    # (mapEntries[i]).world = w
 
     # for ( i = 0; i < nMapEntries; i++, mapEntries++ )
     # {
@@ -392,10 +392,10 @@ proc openWorldFile* (path: string): (bool, World) =
   pageBases = data(q)
   log(runLog, lvlInfo, fmt"Page Base = {pageBases:#X}")
 
-  w.vlmDataPageBase = (pageBases.uint32 and
-      dataSizeMask.uint32).VM_PageNumber
-  w.vlmTagsPageBase = ((pageBases.uint32 and
-      tagSizeMask) shr dataSizeInBits).VM_PageNumber
+  w.vlmDataPageBase = (pageBases.uint64 and
+      dataSizeMask.uint64).VM_PageNumber
+  w.vlmTagsPageBase = ((pageBases.uint64 and
+      tagSizeMask.uint64) shr dataSizeInBits).VM_PageNumber
 
   log(runLog, lvlInfo, fmt"Page Base data value = {w.vlmDataPageBase:#X}")
   log(runLog, lvlInfo, fmt"Page Base tag value = {w.vlmTagsPageBase:#X}")

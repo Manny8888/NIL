@@ -16,6 +16,7 @@ type
 
 # return type should be the same as aboove
 converter toU32 *(vma: QAddress): uint32 = result = vma.uint32
+converter toU64 *(vma: QAddress): uint64 = result = vma.uint64
 proc toIndex* (vma: QAddress): uint32 = result = vma.uint32
 proc `+`* (vma1, vma2: QAddress): QAddress {.borrow.}
 proc `-`* (vma1, vma2: QAddress): QAddress {.borrow.}
