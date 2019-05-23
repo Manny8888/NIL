@@ -168,15 +168,15 @@ proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
 
 # WARNING: Here, the caller provides a location to store the Q that will be read. 
 # The C code allocates a new Q within this function and returns a pointer to it.
-proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
+proc readIvoryWorldFileQ*(w: var World, address: QAddress,
                           q: var LispQ): bool =
 
-  log(ivoryPageReadLog, lvlInfo, fmt"readIvoryWorldFileQ. Attempting read at Q address {qAddress}")
+  log(ivoryPageReadLog, lvlInfo, fmt"readIvoryWorldFileQ. Attempting read at Q address {address}")
 
   # Check the address to be loaded is within the size of the page
-  if (qAddress < 0) or (qAddress >= IvoryPageSizeQs): # The negative test should not be neede, but who knows...
+  if (address < 0) or (address >= IvoryPageSizeQs): # The negative test should not be neede, but who knows...
     log(ivoryPageReadLog, lvlFatal,
-        fmt"Invalid word number {qAddress} for world file {w.pathname}")
+        fmt"Invalid word number {address} for world file {w.pathname}")
     return false
 
   #
@@ -200,8 +200,8 @@ proc readIvoryWorldFileQ*(w: var World, qAddress: QAddress,
     # addressInBytes is in bytes not size of data Qs (normally 4 since uint32) 
     # The C code uses pointer arithmetic instead.
 
-    lowbits = qAddress and lowMask
-    addressInBytes: uint64 = (qAddress and highMask) *
+    lowbits = address and lowMask
+    addressInBytes: uint64 = (address and highMask) *
                              (tagSizeInBytes + dataSizeInBytes) +
                              lowBits
 

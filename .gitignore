@@ -5,6 +5,10 @@ bin/*
 tools/*
 
 runLog.log
+ivoryPageLog.log
+nil_workspace.code-workspace
+
 .vscode/tasks.json
+
 *sync-conflict*
 .#.#*
