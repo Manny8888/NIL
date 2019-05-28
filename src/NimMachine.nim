@@ -1,23 +1,12 @@
 
-import logging, globalstate, world
+import logging, globalstate, world_types, world
 
 
 const
-  worldFileName: string = "../Genera-8-5-xlib-patched.vlod" # FIXME: hardcoded for the moment - should be an option or
-                                                             # a file chooser window
 
 
 echo "Start with world file:"
-echo worldFileName
+echo WorldFileName
 
-var
-  isOK: bool
-  currentWorld: World
-
-(isOK, currentWorld) = openWorldFile(worldFileName)
-
-
-
-# Just in case...
-flushFile(stdout)
+LoadWorld()
 

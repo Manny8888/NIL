@@ -1,121 +1,12 @@
-####################################################################################################################
-##
-# Manipulation of WORLD file
-##
-####################################################################################################################
 
 
-import math, strformat
-import memory, types, logging, globalstate
+import logging, strformat
 
-
-# Common world format format definitions
-const
-  VersionAndArchitectureQ* = 0
-
-  # VLM world file format definitions
-  # Note: the magic numbers were defined in octal in the original sources
-  VLMWorldFileMagic*: array[4, uint8] =
-    [0xA3.uint8, 0x8A.uint8, 0x89.uint8, 0x88.uint8]
-  VLMWorldFileMagicSwapped*: array[4, uint8] =
-    [0x88.uint8, 0x89.uint8, 0x8A.uint8, 0xA3.uint8]
-
-  VLMWorldSuffix* = ".vlod"
-
-  VLMPageSizeQs* = 0x2000
-  VLMBlockSize* = 0x2000
-  VLMBlocksPerDataPage* = dataSizeInBytes
-  VLMBlocksPerTagsPage* = tagSizeInBytes
-  VLMMaximumHeaderBlocks* = 14
-  VLMDataPageSizeBytes* = 4 * VLMPageSizeQs
-  VLMTagsPageSizeBytes* = VLMPageSizeQs
-
-  VLMVersion1AndArchitecture*: QData = 0x800080.QData # 0o40000200
-  VLMWorldFileV1WiredCountQ*: QAddress = 1.QAddress
-  VLMWorldFileV1UnwiredCountQ*: uint32 = 0
-  VLMWorldFileV1PageBasesQ*: QAddress = 3.QAddress
-  VLMWorldFileV1FirstSysoutQ*: QAddress = 0.QAddress
-  VLMWorldFileV1FirstMapQ*: QAddress = 8.QAddress
-
-  VLMVersion2AndArchitecture*: QData = 0x800081.QData # 0o40000200
-  VLMWorldFileV2WiredCountQ*: QAddress = 1.QAddress
-  VLMWorldFileV2UnwiredCountQ*: uint32 = 0
-  VLMWorldFileV2PageBasesQ*: QAddress = 2.QAddress
-  VLMWorldFileV2FirstSysoutQ*: QAddress = 3.QAddress
-  VLMWorldFileV2FirstMapQ*: QAddress = 8.QAddress
-
-  # A page is 256 Q values stored on file as 256 uint32, 256 tags (as bytes)
-  IvoryPageSizeQs*: QAddress = 256.QAddress
-  IvoryPageSizeBytes*: uint32 = IvoryPageSizeQs.uint32 *
-                                (dataSizeInBytes+tagSizeInBytes).uint32
-  IvoryWorldFileWiredCountQ* = 1
-  IvoryWorldFileUnwiredCountQ* = 2
-  IvoryWorldFileFirstSysoutQ* = 0
-  IvoryWorldFileFirstMapQ* = 8
-
-
-type
-  SaveWorldEntry = object
-    startAddress: QAddress    # VMA of data (usually a region) to be saved
-    wordCount: QAddress # Number of words starting at this address to save
-
-  # SaveWorldData = object
-  #   pathnameString: string # Pathname of the world file (a DTP-STRING)
-
-
-  # A single load map entry -- See SYS:NETBOOT;WORLD-SUBSTRATE.LISP for details
-  LoadMapEntryOpCode* = enum
-    LoadMapDataPages          # Load data pages from the file
-    LoadMapConstant           # Store a constant into memory
-    LoadMapConstantIncremented # Store an auto-incrementing constant into memory
-    LoadMapCopy               # Copy an existing piece of memory
-
-  LoadMapEntry* = object
-    loadAddress*: QAddress    # VMA to be filled in by this load map entry
-    count*: QAddress # Number of words to be filled in by this entry. Specified as a 24-bit field originally
-    opcode*: LoadMapEntryOpCode # An LoadMapEntryOpcode specifying how to do so. Specified as an 8-bit field originally
-    data*: LispQ              # FIXME # Interpretation is based on the opcode
-    world*: ref World # -> World from which this entry was obtained
-
-
-
-  # Description of an open world file
-  World* = object
-    pathname*: string         # -> Pathname of the world file
-    fd*: File                 # Unix file descriptor if the world file is open
-    format*: uint # FIXME # A LoadFileFormat indicating the type of file
-    isByteSwapped*: bool      # World is byte swapped on this machine (VLM only)
-    vlmDataPageBase*: VM_PageNumber # Block number of first page of data (VLM only)
-    vlmTagsPageBase*: VM_PageNumber # Block number of first page of tags (VLM only)
-    vlmDataPage*: VM_PageData # -> The data of the current VLM format page
-    vlmTagPage*: VM_PageTag   # -> The tags of the current VLM format page
-    ivoryDataPage*: array[IvoryPageSizeBytes, uint8] # -> The data of the current Ivory format page
-    currentPageNumber*: VM_PageNumber # Page number of the page in the buffer, if any
-    currentQAddress*: QAddress # Address of the Q within the current page to be read
-
-    parentWorld*: ref World   # -> Parent of this world if it's an IDS
-    sysoutGeneration*: QData  # Generation number of this world (> 0 if IDS)
-    sysoutTimestamp1*: QData  # Unique ID of this world, part 1 ...
-    sysoutTimestamp2*: QData  # ... part 2
-    sysoutParentTimestamp1*: QData # Unique ID of this world's parent, part 1 ...
-    sysoutParentTimestamp2*: QData # ... part 2
-
-    nWiredMapEntries*: LispQ
-    wiredMapEntries*: seq[LoadMapEntry] # -> The wired load map entries
-
-    nMergedWiredMapEntries*: LispQ
-    mergedWiredMapEntries*: seq[LoadMapEntry] # ..
-
-    nUnwiredMapEntries*: LispQ
-    unwiredMapEntries*: seq[LoadMapEntry] # -> The unwired load map entries (Ivory only)
-
-    nMergedUnwiredMapEntries*: LispQ
-    mergedUnwiredMapEntries*: seq[LoadMapEntry] # ..
-
+import memory, types, globalstate, world_types
 
 # Read 4 bytes from a particular location and swaps the bytes as appropriate
-proc readAndSwap*(w: var World, byteArray: var openArray[uint8], # array for bytes from which to read
-                  address: uint64): QData =
+proc readAndSwap*(w: var World, byteArray: var openArray[uint8],
+  address: uint64): QData =
   var
     returnValue: uint64
     i: uint64 = 0
@@ -124,9 +15,9 @@ proc readAndSwap*(w: var World, byteArray: var openArray[uint8], # array for byt
   if isLittleEndian:
     shiftSize = 0.int
   else:
-    shiftSize = ((dataSizeInBytes - 1) * 8).int
+    shiftSize = ((DataSizeInBytes - 1) * 8).int
 
-  for i in address .. (address + dataSizeInBytes-1).uint64:
+  for i in address .. (address + DataSizeInBytes-1).uint64:
     returnValue = returnValue + (byteArray[i.int].uint64) shl shiftSize
 
     if isLittleEndian:
@@ -134,7 +25,7 @@ proc readAndSwap*(w: var World, byteArray: var openArray[uint8], # array for byt
     else:
       shiftSize = shiftSize - 8
 
-  log(ivoryPageReadLog, lvlInfo, fmt"{dataSizeInBytes}- byte value read from address (in byte) {address:#X} is {returnValue:#X}")
+  log(ivoryPageReadLog, lvlInfo, fmt"{DataSizeInBytes}- byte value read from address (in byte) {address:#X} is {returnValue:#X}")
 
   return returnValue.QData
 
@@ -145,21 +36,21 @@ proc readIvoryWorldFilePage* (w: var World, pageNumber: VM_PageNumber): bool =
 
   if isNil(w.fd):
     log(ivoryPageReadLog, lvlFatal,
-        "Read Ivory File Page: No file descriptor in world definition")
+      "Read Ivory File Page: No file descriptor in world definition")
     return false
 
   if (w.currentPageNumber == pageNumber):
-    log(ivoryPageReadLog, lvlInfo, fmt"Loading page {$pageNumber:#X} from world file: Page already loaded.")
+    log(ivoryPageReadLog, lvlInfo, fmt"Loading page {pageNumber:#X} from world file: Page already loaded.")
     return true
 
-  log(ivoryPageReadLog, lvlDebug,
-      "Read Ivory File Page. Current file position is:" & $getFilePos(w.fd))
-  log(ivoryPageReadLog, lvlDebug, "Read Ivory File Page. Seeking position:" &
-      $(pageNumber * IvoryPageSizeBytes))
-  setFilePos(w.fd, pageNumber * IvoryPageSizeBytes.int64, fspSet)
+  log(ivoryPageReadLog, lvlDebug, fmt"Read Ivory File Page. Current file position is: {getFilePos(w.fd)}")
+  log(ivoryPageReadLog, lvlDebug, fmt"Read Ivory File Page. Seeking position: {(pageNumber * IvoryPageSizeBytes):#X}")
+
+  # The starting position of pages are shifted by 4 being the magic number 4 bytes at the beginning of the file.
+  setFilePos(w.fd, pageNumber * IvoryPageSizeBytes.int64 + 4, fspSet)
   if readBytes(w.fd, w.ivoryDataPage, 0,
-      IvoryPageSizeBytes).uint32 < IvoryPageSizeBytes:
-    log(ivoryPageReadLog, lvlFatal, fmt"Loading page {$pageNumber:#X} from world file. Could not read enough bytes.")
+    IvoryPageSizeBytes).uint32 < IvoryPageSizeBytes:
+    log(ivoryPageReadLog, lvlFatal, fmt"Loading page {pageNumber:#X} from world file. Could not read enough bytes.")
     return false
 
   w.currentPageNumber = pageNumber
@@ -176,54 +67,51 @@ proc readIvoryWorldFileQ*(w: var World, address: QAddress,
   # Check the address to be loaded is within the size of the page
   if (address < 0) or (address >= IvoryPageSizeQs): # The negative test should not be neede, but who knows...
     log(ivoryPageReadLog, lvlFatal,
-        fmt"Invalid word number {address} for world file {w.pathname}")
+      fmt"Invalid word number {address} for world file {w.pathname}")
     return false
 
   #
-  # The address of the Q object needs to be converted
+  # The address of the Q object needs to be converted to bytes.
+  #
+  # In the load file the formats is done by groups of 4 Q values. 
+  # Each Q value requires 5 bytes: 4 for the data, 1 for the tag.
+  # Lets call Q1 .. Q4 the values, D1..D4 and T1..T4 the corresponding data and tags.
+  #
+  # They are stored as:
+  #     D1, D2, D3, D4,   T1, T2, T3, T4
+  #     <- 16 bytes ->    <-  4 bytes ->
   # 
-  # Q Address (Addr) increase 4 by 4 (since uint32) - Tags are not included
+  # After those 20 bytes, another group of 4 Q values is stored.
   #
-  #            N/A    Addr     Addr+1   Addr+2   Addr+3
-  #          | TAG  | BYTE 0 | BYTE 1 | BYTE 2 | BYTE 3 |  
-  #            extA   extA+1   extA+2   extA+3   extA+4
+  # Of course, each D is stored little/big endian depending on the initial file magic number
   #
-  # Resulting extended address (extA) increase 5 by 5 and include tags.
-  #
+
   const
-    maskBits = 2
-    lowMask = (2 ^ maskBits - 1).uint64
-    highMask = (2 ^ (8 * dataSizeInBytes.int) - 1).uint64 - lowMask
+    # Each quad is 20 bytes = 5 * 4 
+    #                       = (4 + 1) * 4
+    #                       = (DataSizeInBytes + TagSizeInBytes)+ DataSizeInBytes
+    QuadSizeInBytes = (DataSizeInBytes + TagSizeInBytes) * DataSizeInBytes
 
   var
-    # tagSizeInBytes + dataSizeInBytes = 1 + 4 = 5
-    # addressInBytes is in bytes not size of data Qs (normally 4 since uint32) 
-    # The C code uses pointer arithmetic instead.
+    # for a given address, quad is the group of 4 Q values to which it belongs (starting from 0)
+    quad: uint64 = address div 4
 
-    lowbits = address and lowMask
-    addressInBytes: uint64 = (address and highMask) *
-                             (tagSizeInBytes + dataSizeInBytes) +
-                             lowBits
+    # for a given address, quadPosition is the position of the Q value within the group of 4 (starting from 0)
+    quadPosition: uint64 = address mod 4
 
-    # FIXME: The original C code 'x 4' makes no sense to me for the moment given the layout a few lines above
-    # However, pointerOffset is manipulated with pointer arithmetic where it is 4-byte long. That's the likely 
-    # explanation. But then again...
-    tagBytesOffset = addressInBytes * dataSizeInBytes
-    pointerBytesOffset = (addressInBytes + 1) * dataSizeInBytes
+    pointerBytesOffset: uint64
+    tagBytesOffset: uint64
 
 
-  log(ivoryPageReadLog, lvlInfo, fmt"Byte address: {addressInBytes:#X} --- Low bits: {lowBits:#X} --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
+  pointerBytesOffset = quad * QuadSizeInBytes + quadPosition *
+      DataSizeInBytes
+  tagBytesOffset = quad * QuadSizeInBytes + DataSizeInBytes * 4 +
+      quadPosition
 
-  # NOTE FROM THE ORIGINAL C CODE: 
-  # The following code that byte reverses the tags isn't needed. I've 
-  #       left it here in case I discover later that I'm wrong
-  #        so I don't have to derive the correct code again.
-  #
-  #  #if BYTE_ORDER == LITTLE_ENDIAN
-  #  	tagOffset = 4 * 5 * (qAddress >> 2) + (qAddress & 3);
-  #  #else
-  #  	tagOffset = 4 * 5 * (qAddress >> 2) + 3 - (qAddress & 3);
-  #  #endif
+
+  log(ivoryPageReadLog, lvlInfo,
+    fmt"Reading address {address:#X} - quad: {quad:#X} position in quad {quadPosition:#X}" &
+    fmt" --- Tag offset: {tagBytesOffset:#X} --- Pointer offset: {pointerBytesOffset:#X}")
 
   q.tag = w.ivoryDataPage[tagBytesOffset.uint32].QTag
   q.data = readAndSwap(w, w.ivoryDataPage, pointerBytesOffset)
@@ -235,14 +123,23 @@ proc readIvoryWorldFileQ*(w: var World, address: QAddress,
 proc readIvoryWorldFileNextQ(w: var World, q: var LispQ): bool =
 
   log(ivoryPageReadLog, lvlInfo, fmt"Reading next Q at address {w.currentQAddress}")
+
+  # Checking if the address is in the current page
   if w.currentQAddress >= IvoryPageSizeQs:
-    log(ivoryPageReadLog, lvlInfo, fmt"Q address is beyond current page. Loading next page with number {w.currentPageNumber + 1}")
+
+    # If above page size, increase the page number ...
     w.currentPageNumber = w.currentPageNumber + 1
-    w.currentQAddress = w.currentQAddress - IvoryPageSizeQs
+    log(ivoryPageReadLog, lvlInfo, fmt"Q address is beyond current page. Loading next page with number {w.currentPageNumber}")
+
+    # ... loads it ...
     var isOK = readIvoryWorldFilePage(w, w.currentPageNumber)
     if not(isOK):
       log(ivoryPageReadLog, lvlFatal, fmt"Failed to read next page.")
       return false
+
+    # ... and resets the index within the page.
+    w.currentQAddress = w.currentQAddress - IvoryPageSizeQs
+
 
   var isOK = readIvoryWorldFileQ(w, w.currentQAddress, q)
   if not(isOK):
@@ -254,45 +151,32 @@ proc readIvoryWorldFileNextQ(w: var World, q: var LispQ): bool =
 
 
 # Read a load map from the world load file
-proc readLoadMap(w: var World,
-                 nMapEntries: uint32,
-                 mapEntries: var seq[LoadMapEntry]): bool =
+proc readLoadMap(w: var World, nMapEntries: uint32, mapEntries: var seq[
+    LoadMapEntry]): bool =
   var
     q: LispQ
     i: int
     isOK: bool
 
+  if i==0:
+    return true
+
   for i in 0..<nMapEntries:
     log(runLog, lvlInfo, fmt"")
-    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} of {nMapEntries}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i+1} of {nMapEntries}")
     log(runLog, lvlInfo, fmt"readLoadMap: reading address {w.currentQAddress}")
 
     isOK = readIvoryWorldFileNextQ(w, q)
     # mapEntries[i].loadAddress = q.data.QAddress
-    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- Load address: {q}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i+1} -- Load address: {q}")
 
     isOK = readIvoryWorldFileNextQ(w, q)
     # mapEntries[i].op = q.data.QAddress
-    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- opcode and count: {q}")
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i+1} -- opcode and count: {q}")
 
     isOK = readIvoryWorldFileNextQ(w, q)
     # mapEntries[i].data = q
-    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i} -- data: {q}")
-
-
-    # (mapEntries[i]).world = w
-
-    # for ( i = 0; i < nMapEntries; i++, mapEntries++ )
-    # {
-    #     ReadIvoryWorldFileNextQ ( world, &q );
-    #     mapEntries->address = LispObjData ( q );
-
-    #     ReadIvoryWorldFileNextQ ( world, &q );
-    #     * ( Integer * ) ( &mapEntries->op ) = LispObjData ( q );
-    #     ReadIvoryWorldFileNextQ ( world, &q );
-    #     mapEntries->data = q;
-    #     mapEntries->world = world;
-    # }
+    log(runLog, lvlInfo, fmt"readLoadMap: Map Entry # {i+1} -- data: {q}")
 
   return true
 
@@ -314,11 +198,12 @@ proc openWorldFile* (path: string): (bool, World) =
   if open(wFile, w.pathname) == false:
     log(runLog, lvlFatal, "Error opening the world file")
     return (false, w)
+
   w.fd = wFile
   log(runLog, lvlInfo,
-      fmt"openWorldFile. Current file size is: {getFileSize(w.fd):#X} eq. to {getFileSize(w.fd)} bytes")
+    fmt"openWorldFile. Current file size is: {getFileSize(w.fd):#X} eq. to {getFileSize(w.fd)} bytes")
   log(runLog, lvlInfo,
-      fmt"openWorldFile. Current file position is: {getFilePos(w.fd):#X} eq. to {getFilePos(w.fd)}")
+    fmt"openWorldFile. Current file position is: {getFilePos(w.fd):#X} eq. to {getFilePos(w.fd)}")
 
 
   # Check the magic number and corresponding endianness
@@ -330,11 +215,11 @@ proc openWorldFile* (path: string): (bool, World) =
   if magicNumber == VLMWorldFileMagic:
     isLittleEndian = false
     log(runLog, lvlInfo,
-        fmt"Magic number {magicNumber[0]:#X} {magicNumber[1]:#X} {magicNumber[2]:#X} {magicNumber[3]:#X} is big-endian.")
+    fmt"Magic number {magicNumber[0]:#X} {magicNumber[1]:#X} {magicNumber[2]:#X} {magicNumber[3]:#X} is big-endian.")
   elif magicNumber == VLMWorldFileMagicSwapped:
     isLittleEndian = true
     log(runLog, lvlInfo,
-        fmt"Magic number {magicNumber[0]:#X} {magicNumber[1]:#X} {magicNumber[2]:#X} {magicNumber[3]:#X} is little-endian (swapped).")
+    fmt"Magic number {magicNumber[0]:#X} {magicNumber[1]:#X} {magicNumber[2]:#X} {magicNumber[3]:#X} is little-endian (swapped).")
   else:
     log(runLog, lvlFatal, "Magic number is not recognised.")
     return (false, w)
@@ -393,9 +278,9 @@ proc openWorldFile* (path: string): (bool, World) =
   log(runLog, lvlInfo, fmt"Page Base = {pageBases:#X}")
 
   w.vlmDataPageBase = (pageBases.uint64 and
-      dataSizeMask.uint64).VM_PageNumber
+      DataSizeMask.uint64).VM_PageNumber
   w.vlmTagsPageBase = ((pageBases.uint64 and
-      tagSizeMask.uint64) shr dataSizeInBits).VM_PageNumber
+      TagSizeMask.uint64) shr DataSizeInBits).VM_PageNumber
 
   log(runLog, lvlInfo, fmt"Page Base data value = {w.vlmDataPageBase:#X}")
   log(runLog, lvlInfo, fmt"Page Base tag value = {w.vlmTagsPageBase:#X}")
@@ -410,41 +295,106 @@ proc openWorldFile* (path: string): (bool, World) =
   else:
     w.currentQAddress = firstSysoutQ
 
-    log(runLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
-    if not(readIvoryWorldFileNextQ(w, q)):
-      log(runLog, lvlFatal, fmt"Could not read sysOutGeneration.")
-    w.sysoutGeneration = q.data
-    log(runLog, lvlInfo, fmt"value read = {q}")
+  log(runLog, lvlInfo, fmt"Reading sysOutGeneration at address {w.currentQAddress}")
+  if not(readIvoryWorldFileNextQ(w, q)):
+    log(runLog, lvlFatal, fmt"Could not read sysOutGeneration.")
+  w.sysoutGeneration = q.data
+  log(runLog, lvlInfo, fmt"value read = {q}")
 
 
-    log(runLog, lvlInfo, fmt"Reading sysOutTimeStamp1 at address {w.currentQAddress}")
-    if not(readIvoryWorldFileNextQ(w, q)):
-      log(runLog, lvlFatal, fmt"Could not read sysOutTimeStamp1.")
-    w.sysoutTimestamp1 = q.data
-    log(runLog, lvlInfo, fmt"value read = {q}")
+  log(runLog, lvlInfo, fmt"Reading sysOutTimeStamp1 at address {w.currentQAddress}")
+  if not(readIvoryWorldFileNextQ(w, q)):
+    log(runLog, lvlFatal, fmt"Could not read sysOutTimeStamp1.")
+  w.sysoutTimestamp1 = q.data
+  log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(runLog, lvlInfo, fmt"Reading sysOutTimeStamp2 at address {w.currentQAddress}")
-    if not(readIvoryWorldFileNextQ(w, q)):
-      log(runLog, lvlFatal, fmt"Could not read sysOutTimeStamp2.")
-    w.sysoutTimestamp2 = q.data
-    log(runLog, lvlInfo, fmt"value read = {q}")
+  log(runLog, lvlInfo, fmt"Reading sysOutTimeStamp2 at address {w.currentQAddress}")
+  if not(readIvoryWorldFileNextQ(w, q)):
+    log(runLog, lvlFatal, fmt"Could not read sysOutTimeStamp2.")
+  w.sysoutTimestamp2 = q.data
+  log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(runLog, lvlInfo, fmt"Reading sysOutParentTimeStamp1 at address {w.currentQAddress}")
-    if not(readIvoryWorldFileNextQ(w, q)):
-      log(runLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp1.")
-    w.sysoutParentTimestamp1 = q.data
-    log(runLog, lvlInfo, fmt"value read = {q}")
+  log(runLog, lvlInfo, fmt"Reading sysOutParentTimeStamp1 at address {w.currentQAddress}")
+  if not(readIvoryWorldFileNextQ(w, q)):
+    log(runLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp1.")
+  w.sysoutParentTimestamp1 = q.data
+  log(runLog, lvlInfo, fmt"value read = {q}")
 
-    log(runLog, lvlInfo, fmt"Reading sysOutParentTimeStamp2 at address {w.currentQAddress}")
-    if not(readIvoryWorldFileNextQ(w, q)):
-      log(runLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp2.")
-    log(runLog, lvlInfo, fmt"value read = {q}")
+  log(runLog, lvlInfo, fmt"Reading sysOutParentTimeStamp2 at address {w.currentQAddress}")
+  if not(readIvoryWorldFileNextQ(w, q)):
+    log(runLog, lvlFatal, fmt"Could not read sysOutParentTimeStamp2.")
+  log(runLog, lvlInfo, fmt"value read = {q}")
 
 
   w.currentQAddress = firstMapQ
-  isOK = readLoadMap(w, w.nWiredMapEntries.data, w.wiredMapEntries)
-  isOK = readLoadMap(w, w.nUnwiredMapEntries.data, w.unwiredMapEntries)
+  if w.nWiredMapEntries.data==0:
+    log(runLog, lvlInfo, fmt"Starting readLoadMap for Wired Map Entries --- 0 entries.")
+  else:
+    log(runLog, lvlInfo, fmt"Starting readLoadMap for Wired Map Entries --- {w.nWiredMapEntries.data} entries.")
+    isOK = readLoadMap(w, w.nWiredMapEntries.data, w.wiredMapEntries)
+    if (isOK):
+      log(runLog, lvlInfo, fmt"Read OK.")
+
+  if w.nUnwiredMapEntries.data==0:
+    log(runLog, lvlInfo, fmt"Starting readLoadMap for Unwired Map Entries --- 0 entries.")
+  else:
+    log(runLog, lvlInfo, fmt"Starting readLoadMap for Unwired Map Entries --- {w.nUnwiredMapEntries.data} entries..")
+    isOK = readLoadMap(w, w.nUnwiredMapEntries.data, w.unwiredMapEntries)
+    if (isOK):
+      log(runLog, lvlInfo, fmt"Read OK.")
 
 
   return (true, w)
+
+
+proc mergeLoadMaps* =
+
+  if currentWorld.sysoutGeneration == 0:
+    originalWorld = currentWorld
+    #FindParentWorlds(world, worldSearchPath)
+    #MergeParentLoadMap(world)
+  else:
+    currentWorld.nMergedWiredMapEntries = currentWorld.nWiredMapEntries
+    currentWorld.mergedWiredMapEntries = currentWorld.wiredMapEntries
+    currentWorld.nMergedUnwiredMapEntries = currentWorld.nUnwiredMapEntries
+    currentWorld.mergedUnwiredMapEntries = currentWorld.unwiredMapEntries
+
+  discard
+
+proc LoadWorld* () =
+  var
+    isOK: bool
+
+  (isOK, currentWorld) = openWorldFile(WorldFileName)
+  mergeLoadMaps()
+
+
+  var
+    worldImageSize: uint64 = 0
+    i: uint64
+
+  for i in 0..<currentWorld.nMergedWiredMapEntries.data:
+    worldImageSize += VLMLoadMapData(currentWorld,
+        currentWorld.mergedWiredMapEntries[i])
+
+  for i in 0..<currentWorld.nMergedUnwiredMapEntries.data:
+    worldImageSize += VLMLoadMapData(currentWorld,
+        currentWorld.mergedUnwiredMapEntries[i])
+
+
+    # for (i = 0; i < world.nMergedWiredMapEntries; i++) {
+    #     worldImageSize += LoadMapData(&world, &world.mergedWiredMapEntries[i]);
+    # }
+    # for (i = 0; i < world.nMergedUnwiredMapEntries; i++) {
+    #     worldImageSize += LoadMapData(&world, &world.mergedUnwiredMapEntries[i]);
+    # }
+    # CloseWorldFile(&world, TRUE);
+
+
+
+  # Just in case...
+  flushFile(stdout)
+
+  discard
+
 
