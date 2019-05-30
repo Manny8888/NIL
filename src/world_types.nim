@@ -73,7 +73,7 @@ type
     loadAddress*: QAddress    # VMA to be filled in by this load map entry
     count*: QAddress # Number of words to be filled in by this entry. Specified as a 24-bit field originally
     opcode*: LoadMapEntryOpCode # An LoadMapEntryOpcode specifying how to do so. Specified as an 8-bit field originally
-    data*: LispQ              # FIXME # Interpretation is based on the opcode
+    data*: LispQ               # Interpretation is based on the opcode
     world*: ref World # -> World from which this entry was obtained
 
 

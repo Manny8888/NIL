@@ -361,6 +361,92 @@ proc mergeLoadMaps* =
 
   discard
 
+
+proc VLM_LoadMapData* (w: ref World, mapEntry: ref LoadMapEntry) =
+
+  var
+    mapWorld: ref World = new(World)
+    pageNumber : QData
+ 
+  case mapEntry.opcode
+    of LoadMapDataPages:
+      mapWorld = mapEntry.world
+      pageNumber= mapEntry.data.data
+      if mapWorld.isByteSwapped:
+        EnsureVirtualAddressRange(mapEntry->address, (int)mapEntry->op.count, FALSE)
+        ReadSwappedVLMWorldFilePage(mapWorld, pageNumber)
+        mapWorld.currentQAddress = 0.QAddress
+
+    of LoadMapConstantIncremented:
+
+    of LoadMapConstant:
+    
+    of LoadMapCopy:
+    
+    else:
+
+  discard
+
+# static Integer VLMLoadMapData(World *world, LoadMapEntry *mapEntry)
+# {
+#     LispObj q;
+#     World *mapWorld;
+#     Integer pageNumber, theAddress, theSourceAddress;
+#     off_t dataOffset, tagOffset;
+#     int increment = 0, i;
+
+#     switch (mapEntry->op.opcode) {
+#     case LoadMapDataPages:
+#         mapWorld = (World *)mapEntry->world;
+#         pageNumber = LispObjData(mapEntry->data);
+#         if (mapWorld->byteSwapped) {
+#             EnsureVirtualAddressRange(mapEntry->address, (int)mapEntry->op.count, FALSE);
+#             ReadSwappedVLMWorldFilePage(mapWorld, pageNumber);
+#             mapWorld->currentQNumber = 0;
+
+#             LogMessage2("LoadMapDataPages @ %ld, count %d\n", (uint64_t)theAddress, mapEntry->op.count);
+#             theAddress = mapEntry->address;
+#             for (i = 0; i < (int)mapEntry->op.count; i++, theAddress++) {
+#                 ReadSwappedVLMWorldFileNextQ(mapWorld, &q);
+#                 VirtualMemoryWrite(theAddress, &q);
+#             }
+#         } else {
+#             dataOffset = VLMBlockSize * (mapWorld->vlmDataPageBase + pageNumber * VLMBlocksPerDataPage);
+#             tagOffset = VLMBlockSize * (mapWorld->vlmTagsPageBase + pageNumber * VLMBlocksPerTagsPage);
+#             MapWorldLoad(mapEntry->address, (int)mapEntry->op.count, mapWorld->fd, dataOffset, tagOffset);
+#         }
+#         break;
+
+#     case LoadMapConstantIncremented:
+#         increment = 1;
+#         // Fall through to the LoadMapConstant case
+
+#     case LoadMapConstant:
+#         EnsureVirtualAddressRange(mapEntry->address, (int)mapEntry->op.count, FALSE);
+#         VirtualMemoryWriteBlockConstant(mapEntry->address, &(mapEntry->data), (int)mapEntry->op.count, increment);
+#         break;
+
+#     case LoadMapCopy:
+#         EnsureVirtualAddressRange(mapEntry->address, (int)mapEntry->op.count, FALSE);
+#         theAddress = mapEntry->address;
+#         theSourceAddress = LispObjData(mapEntry->data);
+#         for (i = 0; i < (int)mapEntry->op.count; i++, theAddress++, theSourceAddress++) {
+#             q = VirtualMemoryRead(theSourceAddress);
+#             VirtualMemoryWrite(theAddress, &q);
+#         }
+#         break;
+
+#     default:
+#         LogMessage2(
+#             "Unknown load map opcode %d in world file %s", mapEntry->op.opcode, ((World *)mapEntry->world)->pathname);
+#         PuntWorld2(world, "Unknown load map opcode %d in world file %s", mapEntry->op.opcode,
+#             ((World *)mapEntry->world)->pathname);
+#     }
+
+#     return ((Integer)mapEntry->op.count);
+# }
+
+
 proc LoadWorld* () =
   var
     isOK: bool
