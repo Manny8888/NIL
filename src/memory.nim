@@ -268,7 +268,7 @@ proc ceiling (n:SomeNumber, d: SomeNumber): VM_PageNumber =
 # back to appropriate Lisp fault 
 # Constants are copied from /usr/include/x86_64-linux-gnu/bits/mman-linux.h line 31+
 const
-  PROT_NONE		: uint8 = 0x0 # Page can not be accessed.  
+  PROT_NONE : uint8 = 0x0 # Page can not be accessed.  
   PROT_READ : uint8 = 0x1 # Page can be read.  
   PROT_WRITE : uint8 = 0x2 # Page can be written.  
   PROT_EXEC : uint8 = 0x4 # Page can be executed.  
@@ -332,9 +332,14 @@ proc EnsureVirtualAddress(address : QAddress, faultp:bool):ByteAddress =
 
   if (attr and VMAttributeExists) != 0:
     # All "created" pages are modified for our purposes
+    # FIXME Does it mean that created pages are considered dirty? 
     if (attr and VMAttribute_Modified) != 0:
       AdjustProtection(address, attr or VMAttribute_Modified)
     return MemoryPage_Size
+
+
+
+
 
   if WadCreated(address):
     SetCreated(address, faultp, false)

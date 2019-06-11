@@ -48,11 +48,11 @@ const
   # And maybe one day allow for more tags and 64-bit lisp machines......
   # The size in bits needs to be enough to store all the bits.
   DataSizeInBits*: uint64 = 28
-  DataSizeInBytes*: uint64 = sizeof(QData)
+  DataSizeInBytes*: uint64 = sizeof(QData).uint64
   DataSizeMask*: uint64 = (2 ^ DataSizeInBits - 1).uint64
 
   TagSizeInBits*: uint64 = 32.uint64 - DataSizeInBits
-  TagSizeInBytes*: uint64 = sizeof(QTag)
+  TagSizeInBytes*: uint64 = sizeof(QTag).uint64
   TagSizeMask*: uint64 = ((2 ^ TagSizeInBits - 1) shl DataSizeInBits).uint64
 
 

@@ -5,7 +5,7 @@ This project is a way to learn more about _Nim_ by translating the _Symbolics_ l
 
 *Note that:*
 
-- The nimble file is useless. Simply run *nim compile --checks:on --run src/NimMachine.nim* for the moment. 
+- The nimble file is useless. Simply run *nim compile --checks:on --run src/NimMachine.nim* for the moment.
 
 - The runtime creates 2 logs to track what's happening. They are in the top level directory hard-coded as ``ivoryPageLog.log`` for memory reads and ``runLog.log`` for everything else. You can also run ``true > runLog.log ; true > ivoryPageLog.log ; nim compile --checks:on --run src/NimMachine.nim``. If the log files are opened in a text editor with auto-reload, ``true > file`` clears the content of a file without clearing the inode which prevents the auto-reload from getting confused.
 
