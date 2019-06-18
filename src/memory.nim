@@ -150,7 +150,7 @@ proc DefaultAttributes(faultp:bool, worldp:bool) : VMAttribute =
 
 # This could be a sparse array, should someone want to implement it 
 var 
-  VMAttributeTable : array[0..(2^(MemoryPage_Total.uint64 - 1)), VMAttribute]
+  VMAttributeTable : array[0..(2 ^ (MemoryPage_Total.uint64 - 1)), VMAttribute]
   
 
 

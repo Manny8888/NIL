@@ -1,9 +1,8 @@
 
-import logging, globalstate, world_types, world
+import logging
+import globalstate, world_types, world
 
-
-const
-
+# const
 
 echo "Start with world file:"
 echo WorldFileName
