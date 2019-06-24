@@ -3,10 +3,11 @@
 :doctype: book
 :author: Symbolics Inc.
 Revision 2
-:toc: macro
+:toc: left
 :toclevels: 5
 :sectnums:
 :sectlinks:
+:stem: latexmath
 
 // /////////////////////////////////////////////////////////////////////////////
 //
@@ -78,7 +79,15 @@ Revision 2
 // /////////////////////////////////////////////////////////////////////////////
 // /////////////////////////////////////////////////////////////////////////////
 
+// [macros]
+// (?su)[\\]?(?P<name>linkman):(?P<target>\S*?)\[(?P<attrlist>.*?)\]=
+//
+// (?su) --- sets options s=matches all, u=matches unicode
+// [\\]? --- possibly starts with a backslash like a tex macro
+// (?P<name>NAME):(?P<target>\S*?)\[(?P<attrlist>.*?)\]=    --- note \S matches whitespace; .*? non-greedy repetition (i.e. as long as possible) with the dot excluding newlines
 
+
+[preamble]
 This document is COMPANY CONFIDENTIAL. It contains extremely sensitive and
 proprietary information. Reasonable and appropriate care should be taken to
 protect this information. Copies of this document are individually numbered with
@@ -88,12 +97,7 @@ collected for centralized destruction. Under no circumstances is this document
 to be copied. If you need to have someone added to the distribution list or if
 more copies of this document are needed, contact Linda Birch
 
-(Birch or x7605).
-
 cover-letter.text >schnorr>distribution V: (1) 12/17/86 16:25:22 Page 1
-
-toc::[]
-
 
 == Lisp-Machine Data Types
 
@@ -112,26 +116,34 @@ forwarding pointers and special markers. "invisible". to ordinary Lisp code,
 these are used primarily for system memory management, including garbage
 collection.) .
 
-I-machine architecture is fully type coded: every word in memory has a data-type field. The function of the data-type
-encoding, to be described in this chapter, is to allow I-machine hardware to discriminate between the types of data it
-is operating on in order to handle each appropriately. More information in how I-machine instructions use different
-types of data is contained in another chapter. See the section".Macroinstruction Set".
+I-machine architecture is fully type coded: every word in memory has a data-type
+field. The function of the data-type encoding, to be described in this chapter,
+is to allow I-machine hardware to discriminate between the types of data it is
+operating on in order to handle each appropriately. More information in how
+I-machine instructions use different types of data is contained in another
+chapter. See the section".Macroinstruction Set".
 
-The chapter first introduces the I-machine’s-basic storage unit. It then lists the different ways that a Lisp object can
-be stored in memory and describes the components of these representations. Note the interrelation between object
-references ‘and stored representations of objects: while a stored representation is the target of an object reference,
-it can also contain object references as part of its structure. This relationship reflects the nature of the Lisp
+The chapter first introduces the I-machine’s-basic storage unit. It then lists
+the different ways that a Lisp object can be stored in memory and describes the
+components of these representations. Note the interrelation between object
+references ‘and stored representations of objects: while a stored representation
+is the target of an object reference, it can also contain object references as
+part of its structure. This relationship reflects the nature of the Lisp
 language.
 
-As part of its introduction to stored representations, the chapter discusses those stored objects that are not object
-references, including those that are invisible. This includes forwarding pointers, which are used when list or structure
-objects are moved. These are discussed here, despite the fact that the structures they are used in have not yet been
-defined. The general overview of data types encountered in I-machine memory makes forward references to some structures
-necessary. The reader can make use of the cross references supplied to help clarify these sections.
+As part of its introduction to stored representations, the chapter discusses
+those stored objects that are not object references, including those that are
+invisible. This includes forwarding pointers, which are used when list or
+structure objects are moved. These are discussed here, despite the fact that the
+structures they are used in have not yet been defined. The general overview of
+data types encountered in I-machine memory makes forward references to some
+structures necessary. The reader can make use of the cross references supplied
+to help clarify these sections.
 
-After the introduction, the body of the chapter describes and defines the structure of each of the Lisp objects that the
-I-machine architecture accommodates with a specifically assigned data type. The concluding section summarizes the
-data-type information.
+After the introduction, the body of the chapter describes and defines the
+structure of each of the Lisp objects that the I-machine architecture
+accommodates with a specifically assigned data type. The concluding section
+summarizes the data-type information.
 
 === Introduction to Lisp-Machine Objects
 
@@ -139,9 +151,11 @@ data-type information.
 
 ===== Length and Format
 
-Words are the basic unit of storage on the I machine. Every item in memory, including object references and object
-representations, is made up of one or more words. Whenever we refer to an address, it is the address of some word. More
-information on addresses is available elsewhere. See the section".Memory Layout and Addressing".
+Words are the basic unit of storage on the I machine. Every item in memory,
+including object references and object representations, is made up of one or
+more words. Whenever we refer to an address, it is the address of some word.
+More information on addresses is available elsewhere. See the section".Memory
+Layout and Addressing".
 
 A word contains 40 bits, which are assigned to the following fields:
 
@@ -152,40 +166,103 @@ A word contains 40 bits, which are assigned to the following fields:
 |<31:3> | 32 bits | Address or Immediate Data. 
 |===
 
-Words in actual physical memory may be more than 40 bits wide to allow for parity or ECC schemes. The architecture does
-not require the existence of parity. or ECC nor does it specify. any specific ECC algorithm. Such information and its
-implications are part of the documentation of each implementation and of the system units that support the
-implementation.
+Words in actual physical memory may be more than 40 bits wide to allow for
+parity or ECC schemes. The architecture does not require the existence of
+parity. or ECC nor does it specify. any specific ECC algorithm. Such information
+and its implications are part of the documentation of each implementation and of
+the system units that support the implementation.
 
 ===== Fields
 
-The data-type field indicates what kind of information is stored in a word. Each Lisp object referenced by its own
-assigned data type is explained in detail in the object, or the actual representation of an object. This is s
+The data-type field indicates what kind of information is stored in a word. Each
+Lisp object referenced by its own assigned data type is explained in detail in
+the object, or the actual representation of an object. This is s
 explained in. the. sections covering the individual data types.
 
-The cdr-code field is used for various purposes. For header data types; the cdr-code field is used as an extension of
-the data-type field: For stored representations of lists, the contents of this field indicate how the ‘data that
-constitute the list are stored. Other uses of the edr-code field are for. instruction sequencing. Use of the cdr code is
-explained in the sections. on 1 lists, headers, and compiled functions.
+The cdr-code field is used for various purposes. For header data types; the
+cdr-code field is used as an extension of the data-type field: For stored
+representations of lists, the contents of this field indicate how the ‘data that
+constitute the list are stored. Other uses of the edr-code field are for.
+instruction sequencing. Use of the cdr code is explained in the sections. on 1
+lists, headers, and compiled functions.
 
 ==== Classes of Stored Object Representations
 
-Figure 1 illustrates the ways in which objects are represented,
+Figure 1 illustrates the ways in which objects are represented.
 
-The storage structures for Lisp objects are introduced here so that the reader will be able to see how the various data
-types function within them.
+["graphviz", "Classes of object representations" ]
+--------------------------------------------------------------------------------
+digraph G {
+  node [shape=plaintext]
+  1 [ label = "Object Representations" ] 
 
-There are three fundamentally. different ways that Lisp objects are stored in memory. An object can be stored
+  2 [ label = "Immediate Objects" ] 
+  3 [ label = "Structure Objects" ] 
+  4 [ label = "List Objects" ] 
+
+  5 [ label = "Compiled Functions" ]
+  6 [ label = "Instances"]
+  7 [ label = "Arrays"]
+  8 [ label = "Symbols"]
+  9 [ label = "Figures"]
+
+  10 [ label = "Conses"] 
+  11 [ label = "Compact lists"] 
+  12 [ label = "Closures"] 
+  13 [ label = "Generic Functions"] 
+
+  14 [ shape = record, label = "<b1> CDR CODE | <b2> DATA TYPE \n (=dtp-fixnum) | <b3> byte/byte/byte/byte" ] 
+  15 [ shape = record, label = "<b1> CDR CODE | <b2> DATA TYPE  | <b3> byte/byte/byte/byte" ] 
+  16 [ shape = record, label = "<b1> CDR CODE | <b2> DATA TYPE  | <b3> byte/byte/byte/byte" ] 
+  17 [ shape = record, label = "<b1> CDR CODE | <b2> DATA TYPE \n (=dtp-headerh) | <b3> byte/byte/byte/byte" ] 
+
+  18 [ label = "Numbers: \n\n Fixnums \n Small ratios \n Single precision \n Floating point numbers" ]
+  19 [ label = "Physical addresses" ]
+  20 [ label = "Primitive types: \n  Characters" ]
+  21 [ shape = record, label = "<b1> CDR CODE | <b2> DATA TYPE \n (=dtp-character) | <b3> Control bits/Style/Charset/Subindex" ] 
+
+  22 [ shape = record, label = "<b1> CDR CODE \n (= NEXT) | <b2> DATA TYPE | <b3> 32-bit address of CAR" ]
+  23 [ shape = record, label = "<b1> CDR CODE \n (= NIL) | <b2> DATA TYPE  | <b3> 32-bit address of CADR" ] 
+ 
+  subgraph {
+    17 -> 16 -> 15 -> 14
+  }
+
+  subgraph {
+    22 -> 23
+  }
+
+  1 -> { 2 3 4 }
+  3 -> { 5 6 7 8 9 }
+  4 -> { 10 11 12 13 }
+
+  7 -> 17
+
+  2 -> { 18 19 20 }
+  20 -> 21
+
+  11 -> 22 
+}
+--------------------------------------------------------------------------------
+
+
+The storage structures for Lisp objects are introduced here so that the reader
+will be able to see how the various data types function within them.
+
+There are three fundamentally. different ways that Lisp objects are stored in
+memory. An object can be stored
 
 - as a list,
 - as immediate data,
 - or as a structure.
 
-A list object is an object built out of one or more conses. Refer to the Reference Guide to Symbolics-Lisp for the
-definition of a.cons. The representation consists of a block of memory words strung together by means of the cdr codes.
-Often the block consists of only one or two words, so-it is important to avoid the overhead of having an extra header
-word: this is why list representation and structure representation are different. The following types of objects have
-list representations:
+A list object is an object built out of one or more conses. Refer to the
+Reference Guide to Symbolics-Lisp for the definition of a.cons. The
+representation consists of a block of memory words strung together by means of
+the cdr codes. Often the block consists of only one or two words, so-it is
+important to avoid the overhead of having an extra header word: this is why list
+representation and structure representation are different. The following types
+of objects have list representations:
 
 - conses,
 - lists,
@@ -196,16 +273,20 @@ list representations:
 - lexical closures, and
 - generic functions
 
-Note that there is a difference between the concept of a list as a type of structure and the concept of the data type
-dtp-list. All the above data types use list structure, including. cdr coding (described later). Only the object
-references to lists and conses use the data type dtp-list. (There is no dtp-cons.)
+Note that there is a difference between the concept of a list as a type of
+structure and the concept of the data type dtp-list. All the above data types
+use list structure, including. cdr coding (described later). Only the object
+references to lists and conses use the data type dtp-list. (There is no
+dtp-cons.)
 
 Figure 1. Classes of stored object representations.
 
-An immediate object does not require any additional memory words for its representation. Instead the entire object
-representation is contained right in the object: reference. To be an immediate object,.an object type must not be
-subject: to side-effects, must: have a small representation, and must. have a need for very efficient allocation of new
-objects. of that type. The following types of objects have immediate representations:
+An immediate object does not require any additional memory words for its
+representation. Instead the entire object representation is contained right in
+the object: reference. To be an immediate object,.an object type must not be
+subject: to side-effects, must: have a small representation, and must. have a
+need for very efficient allocation of new objects. of that type. The following
+types of objects have immediate representations:
 
 - small integers (fixnums),
 - single-precision floating-point numbers,
@@ -214,12 +295,15 @@ objects. of that type. The following types of objects have immediate representat
 - packed instructions, and
 - physical addresses
 
-A structure object is represented as a block of memory words. The first word contains a header with a special data type
-code. Usually all words after the first contain object references. The header contains enough information to determine
-the size of the object’s representation in memory. Further, it contains enough information about the type of the object
-so that a legal object reference designating this object can be constructed. Structure representation is designed to
-work for large objects. Some attention is also paid to minimizing overhead for small objects, but there. is always at
-least one word of overhead. The. objects represented as structures are:
+A structure object is represented as a block of memory words. The first word
+contains a header with a special data type code. Usually all words after the
+first contain object references. The header contains enough information to
+determine the size of the object’s representation in memory. Further, it
+contains enough information about the type of the object so that a legal object
+reference designating this object can be constructed. Structure representation
+is designed to work for large objects. Some attention is also paid to minimizing
+overhead for small objects, but there. is always at least one word of
+overhead. The. objects represented as structures are:
 
 - symbols,
 - instances,
@@ -227,25 +311,30 @@ least one word of overhead. The. objects represented as structures are:
 - arrays, and
 - compiled functions.
 
-The stored representation of a list or structure object is contained in some number of consecutive words of memory. Each
-memory word within the structure may contain an object reference, a header, a forwarding pointer, or a special marker.
+The stored representation of a list or structure object is contained in some
+number of consecutive words of memory. Each memory word within the structure may
+contain an object reference, a header, a forwarding pointer, or a special
+marker.
 
-The data-type code identifies the word type. For example, an array is represented as a header word, which contains such
-information as the length of the array, and; following the header, memory words that contain the elements of the array.
-An object reference to an array without a leader contains the address of the first memory word in the stored
-representation of the array.
+The data-type code identifies the word type. For example, an array is
+represented as a header word, which contains such information as the length of
+the array, and; following the header, memory words that contain the elements of
+the array. An object reference to an array without a leader contains the address
+of the first memory word in the stored representation of the array.
 
 ==== Components of Stored Representations
 
-The components of the stored representations to be found in Lisp machine memory are either object references, headers,
-forwarding (invisible) pointers, or special markers.
+The components of the stored representations to be found in Lisp machine memory
+are either object references, headers, forwarding (invisible) pointers, or
+special markers.
 
 ===== Object References
 
-Object references are the mechanism by which one refers to an object. The object reference is the fundamental form of
-data in this and any Lisp system. Object references are similar in function to the".pointer". of other languages. As
-noted before, an object reference can both point to the representation of a Lisp object and be a component part of such
-a representation.
+Object references are the mechanism by which one refers to an object. The object
+reference is the fundamental form of data in this and any Lisp system. Object
+references are similar in function to the".pointer". of other languages. As
+noted before, an object reference can both point to the representation of a Lisp
+object and be a component part of such a representation.
 
 There are three types of object references:
 
@@ -255,31 +344,84 @@ There are three types of object references:
 
 Figure 2 illustrates the three types of object references.
 
-Object references by address are implemented by a memory word whose address field contains the virtual address of the
-stored representation of the object. Such memory words are categorized as pointer data. Examples of this type of object
-reference are symbols, lists, and arrays.
+["graphviz", "Object References" ]
+--------------------------------------------------------------------------------
+digraph G {
+  node [shape=plaintext]
 
-Immediate object references are implemented by memory words that directly contain the entire representation of the
-object. These are implernented by memory words that contain the object in the 32-bit immediate data field. Examples of
-this type of object reference are small integers (fixnums) and single-precision floating- point numbers.
+  "(Example of contents are not exhaustive)" -> h1 [ style=invis ]
 
-Pointers are implemented in the same way as object references by address. The difference between these two types is that
-pointers contain the virtual addresses of locations that do not contain objects: they point instead to locations within
-objects - for example, to the value cell of a symbol. Pointers are also categorized as pointer data.
+  h1 [ shape=plaintext, label="MEMORY WORD" ]
+  c1 [ shape = record, label = "<b1> CDR CODE \n 2 bits | <b2> DATA TYPE \n 6 bits | <b3> ADDRESS OR DATA \n 32 bits" ]
+  subgraph {
+    h1 -> c1 [style  = invis]
+  }
+
+  h2 [ shape=plaintext, label="POINTER" ]
+  c2 [ shape = record, label = "<b1> CDR CODE \n 2 bits | <b2> DATA TYPE \n 6 bits | <b3> ADDRESS \n 32 bits" ]
+  subgraph {
+    h2 -> c2 [ style = invis ]
+  }
+
+  h3 [ shape=plaintext, label="IMMEDIATE OBJECT REFERENCE" ]
+  c3 [ shape = record, label = "<b1> CDR CODE \n 2 bits | <b2> DATA TYPE \n 6 bits | <b3> DATA \n 32 bits" ]
+  subgraph {
+    h3 -> c3 [ style = invis ]
+  }
+
+  h4 [ shape=plaintext, label="OBJECT REFERENCE BY ADDRESS" ]
+  c4  [ shape = record, label = "<b1> CDR CODE \n 2 bits | <b2> DATA TYPE \n 6 bits | <b3> ADDRESS \n 32 bits" ]
+  subgraph {
+    h4 -> c4 [ style = invis ]
+  }
+
+  c1 -> { h2 h3 h4 }
+
+  c2 -> { Locative "Physical address" "(external-value-cell \n Visible for binding only)" PC }
+
+  c3 -> { Fixnum "Single precision \n floating point number" }
+
+  c4 -> { Symbol List Array }
+
+}
+--------------------------------------------------------------------------------
+
+
+
+Object references by address are implemented by a memory word whose address
+field contains the virtual address of the stored representation of the object.
+Such memory words are categorized as pointer data. Examples of this type of
+object reference are symbols, lists, and arrays.
+
+Immediate object references are implemented by memory words that directly
+contain the entire representation of the object. These are implernented by
+memory words that contain the object in the 32-bit immediate data field.
+Examples of this type of object reference are small integers (fixnums) and
+single-precision floating- point numbers.
+
+Pointers are implemented in the same way as object references by address. The
+difference between these two types is that pointers contain the virtual
+addresses of locations that do not contain objects: they point instead to
+locations within objects - for example, to the value cell of a symbol. Pointers
+are also categorized as pointer data.
 
 ===== Headers
 
-A header is the first word in the stored representation of structure objects. The header marks the boundary between the
-stored representations of two objects and contains information about the object that it heads. This information is
-either immediate data, when the header. type is dtp-header-i, or it is the address of some descriptive data, when the
-header type is dtp-header-p. The header-i format contains object-specific immediate data in bits <31:0>. The header-p
-format ‘contains the address of an object-specific item in bits <31:0>. Object references usually use the address of an
-object’s header as the address of the object. (The only exceptions are the object reference to. a compiled function and
-the object reference to an array with a leader, in which case the reference points to a specified location inside the.
-structure.
+A header is the first word in the stored representation of structure objects.
+The header marks the boundary between the stored representations of two objects
+and contains information about the object that it heads. This information is
+either immediate data, when the header. type is dtp-header-i, or it is the
+address of some descriptive data, when the header type is dtp-header-p. The
+header-i format contains object-specific immediate data in bits <31:0>. The
+header-p format ‘contains the address of an object-specific item in bits <31:0>.
+Object references usually use the address of an object’s header as the address
+of the object. (The only exceptions are the object reference to. a compiled
+function and the object reference to an array with a leader, in which case the
+reference points to a specified location inside the. structure.
 
-The cdr-code field of a header word is used as.the header-type field: it distinguishes what kind of object the structure
-represents. The four header types for each type of header format are shown in Table 1.
+The cdr-code field of a header word is used as.the header-type field: it
+distinguishes what kind of object the structure represents. The four header
+types for each type of header format are shown in Table 1.
 
 Figure 2, Three types of object references.
 
@@ -293,7 +435,7 @@ Figure 2, Three types of object references.
 | 3 | | Reserved 
 |===
 
-[cols="m,m,v", options="header", grid=rows]
+[cols="m,m,a", options="header", grid=rows]
 .DTP-HEADER-1
 |===
 | Header | Symbolic Name | Object Type
@@ -316,9 +458,11 @@ section <<_forwarding_invisible_pointers>>.
 
 ===== Forwarding (Invisible) Pointers
 
-A forwarding pointer specifies that a reference to the location containing it should be redirected to another memory
-location, just as in postal forwarding. These are also called invisible pointers. They are used for a number of internal
-bookkeeping purposes by the storage management software, including the implementation of extendable arrays.
+A forwarding pointer specifies that a reference to the location containing it
+should be redirected to another memory location, just as in postal forwarding.
+These are also called invisible pointers. They are used for a number of internal
+bookkeeping purposes by the storage management software, including the
+implementation of extendable arrays.
 
 Figure 3: Use of forwarding pointers to move an array.
 
@@ -329,38 +473,48 @@ The data types of the forwarding pointers are:
 - dtp-header-forward
 - dtp-element-forward
 
-An external-value-cell: pointer is used to link a ‘symbol’s value cell to a closure or instance value cell. It is not
-invisible to binding and tmbinding. See the section".Binding Stack".
+An external-value-cell: pointer is used to link a ‘symbol’s value cell to a
+closure or instance value cell. It is not invisible to binding and tmbinding.
+See the section".Binding Stack".
 
-A one-q-forward pointer forwards only the cell that contains it, that is, it indicates that -the cell is contained at
-the address specified in the address field of the dtp-one-q-forward word and that the cdr-code of the required data is
-the cdr eode of the dtp-one-q-forward word. This pointer is used to link a symbol value or function cell to a wired cell
-or a compiled-function’s function cell, as well as. for many other applications.
+A one-q-forward pointer forwards only the cell that contains it, that is, it
+indicates that -the cell is contained at the address specified in the address
+field of the dtp-one-q-forward word and that the cdr-code of the required data
+is the cdr eode of the dtp-one-q-forward word. This pointer is used to link a
+symbol value or function cell to a wired cell or a compiled-function’s function
+cell, as well as. for many other applications.
 
-A header-forward pointer is used when a whole structure is forwarded. This word marks where the header used to be, and
-contains the address of where the header is now. When an array with a leader is forwarded, dtp-header-forward. pointers
-replace both the prefix header and the leader header. The other words of the structure are forwarded with
-dtp-element-forward pointers. The address field of an element-forward pointer contains the new address of the word that
-used to be there, The cdr code of the required data is stored with the relocated data – the
+A header-forward pointer is used when a whole structure is forwarded. This word
+marks where the header used to be, and contains the address of where the header
+is now. When an array with a leader is forwarded, dtp-header-forward. pointers
+replace both the prefix header and the leader header. The other words of the
+structure are forwarded with dtp-element-forward pointers. The address field of
+an element-forward pointer contains the new address of the word that used to be
+there, The cdr code of the required data is stored with the relocated data – the
 cdr. code of the header-forward pointer is ignored. Every word of the
 structure except the headers contains an element-forward pointer.
 
-A header-forward pointer is also used in connection with list representation. List representation is explained fully in
-another section. See the section".Representation of Lists". When a one-word cons must be expanded’ to a two-word cons
-by rplacd, a new two-word cons is allocated and the old one-word cons is replaced by a header-forward pointer containing
-the address of the new cons. (The cdr code of the header-forward pointer is required to be edr-nil for garbage-
-collection purposes. It is ignored by edr and rplacd operations.) The cdr code in the location containing the forwarding
-pointer is ignored. This is one difference between.a header-forward pointer and a one-q-forward pointer: the cdr code in
-the location containing a one-q-forward pointer is used rather than ignored. See Figure 4. This figure illustrates how a
-cons whose ear contains a reference to a fixnum and whose cdr is nil is changed when an rplaed instruction changes its
-edr to another fixnum.
+A header-forward pointer is also used in connection with list representation.
+List representation is explained fully in another section. See the
+section".Representation of Lists". When a one-word cons must be expanded’ to a
+two-word cons by rplacd, a new two-word cons is allocated and the old one-word
+cons is replaced by a header-forward pointer containing the address of the new
+cons. (The cdr code of the header-forward pointer is required to be `cdr-nil` for
+garbage- collection purposes. It is ignored by edr and rplacd operations.) The
+cdr code in the location containing the forwarding pointer is ignored. This is
+one difference between.a header-forward pointer and a one-q-forward pointer: the
+cdr code in the location containing a one-q-forward pointer is used rather than
+ignored. See Figure 4. This figure illustrates how a cons whose ear contains a
+reference to a fixnum and whose cdr is nil is changed when an rplaed instruction
+changes its edr to another fixnum.
 
 ===== Special Markers
 
-A special marker indicates that the memory location containing it does not currently contain an object reference. An
-attempt to use the contents of that location signals an error. The address field of a special marker is used by error-
-handling software to determine what kind of error should be reported. (The hardware does not use the special-marker
-address field.)
+A special marker indicates that the memory location containing it does not
+currently contain an object reference. An attempt to use the contents of that
+location signals an error. The address field of a special marker is used by
+error- handling software to determine what kind of error should be reported.
+(The hardware does not use the special-marker address field.)
 
 Figure 4, Use of forwarding pointers to expand a cons.
 
@@ -370,42 +524,54 @@ The data types of the special.markers are:
 - dtp-monitor-forward
 - dtp-gc-forward
 
-A null special marker is placed in the value cell or function cell of a symbol ‘or in the instarice-variable value cell
-in an instance, in those cases when no value has been assigned.. The address field of the null marker contains the
-address of the name of the variable. This makes it possible for an error handler to report the name of the offending
-variable when an attempt to use the value of an unbound variable is detected.
+A null special marker is placed in the value cell or function cell of a symbol
+‘or in the instarice-variable value cell in an instance, in those cases when no
+value has been assigned.. The address field of the null marker contains the
+address of the name of the variable. This makes it possible for an error handler
+to report the name of the offending variable when an attempt to use the value of
+an unbound variable is detected.
 
-A null special marker is also used to initialize a freshly-created virtual memory pagé in case it is accidentally
-accessed before an object is created in it. The address field contains the word’s own address.
+A null special marker is also used to initialize a freshly-created virtual
+memory pagé in case it is accidentally accessed before an object is created
+in it. The address field contains the word’s own address.
 
-The encoding of the null-special-marker data type is zero. Memory that is initialized to all bits zero thus. contains
-all null words, which will cause a trap if referenced.
+The encoding of the null-special-marker data type is zero. Memory that is
+initialized to all bits zero thus. contains all null words, which will cause a
+trap if referenced.
 
-The monitor special marker is intended for use with a debugging feature that will allow modifications of a particular
-storage location to be intercepted. See the section".Exception Handling".
+The monitor special marker is intended for use with a debugging feature that
+will allow modifications of a particular storage location to be intercepted. See
+the section".Exception Handling".
 
-A marker of type dtp-ge-forward is used by the garbage collector and may only appear in oldspace. When an object is
-evacuated from oldspace, each word of the object’s former representation contains a dtp-ge-forward that points to the
-new location of that word… It is categorized here as a special marker, rather than as a pointer, since it is visible
-only to the garbage-collecting system, never to Lisp code.
+A marker of type dtp-ge-forward is used by the garbage collector and may only
+appear in oldspace. When an object is evacuated from oldspace, each word of the
+object’s former representation contains a dtp-ge-forward that points to the new
+location of that word… It is categorized here as a special marker, rather than
+as a pointer, since it is visible only to the garbage-collecting system, never
+to Lisp code.
 
 ==== Operand-Reference Classification
 
-[cols="a,v", options="header", grid=rows]
+[cols="a,m", options="header", grid=rows]
 |===
 |Marker Class | Marker type 
 
 | Immediate data
-| dtp-fixnum, dtp-small-ratio, dtp-single-float, dtp-character, dtp-physical-address, dtp-packed-instruction,
-dtp-spare-immediate-1 (22 type codes)
+| dtp-fixnum, dtp-small-ratio, dtp-single-float, dtp-character,
+dtp-physical-address, dtp-packed-instruction, dtp-spare-immediate-1 (22 type
+codes)
 
 | Pointer data
-| dtp-double-float, dtp-bignum, dtp-big-ratio, dtp-complex,dtp-spare-number, dtp-instance, dtp-list-instance,
-dtp-array-instance, dtp-string-instance, dtp-nil, dtp-list, dtp-array, dtp-string, dtp-symbol, dtp-locative,
-dtp-lexical-closure, dtp-dynamic-closure, dtp-compiled-function, dtp-generic-function, dtp-spare-pointer-1,
-dtp-spare-pointer-2,_ dtp-spare-pointer-3, dtp-spare-pointer-4, dtp-even-pe, dtp-odd-pe, dtp-call-compiled-even,
-dtp-call-compiled-odd, dtp-call-indirect, dtp-call-generic, dtp-call-compiled-even-prefetch,
-dtp-call-compiled-odd-prefetch, dtp-call-indirect-prefetch, dtp-call-generic-prefetch (33 type codes)
+| dtp-double-float, dtp-bignum, dtp-big-ratio, dtp-complex,dtp-spare-number,
+dtp-instance, dtp-list-instance, dtp-array-instance, dtp-string-instance,
+dtp-nil, dtp-list, dtp-array, dtp-string, dtp-symbol, dtp-locative,
+dtp-lexical-closure, dtp-dynamic-closure, dtp-compiled-function,
+dtp-generic-function, dtp-spare-pointer-1, dtp-spare-pointer-2,_
+dtp-spare-pointer-3, dtp-spare-pointer-4, dtp-even-pe, dtp-odd-pe,
+dtp-call-compiled-even, dtp-call-compiled-odd, dtp-call-indirect,
+dtp-call-generic, dtp-call-compiled-even-prefetch,
+dtp-call-compiled-odd-prefetch, dtp-call-indirect-prefetch,
+dtp-call-generic-prefetch (33 type codes)
 
 | Null | dtp-null (1 type code)
 | Immediate Header | dtp-header-i (1 type code)
@@ -422,11 +588,12 @@ dtp-call-compiled-odd-prefetch, dtp-call-indirect-prefetch, dtp-call-generic-pre
 | Immediate | The union of immediate data and immediate header (23 type codes)
 
 | Pointer
-| The union of pointer data, null, pointer header, HFWD, EFWD, 1FWD, EVCP, and monitor (40 type codes)
+| The union of pointer data, null, pointer header, HFWD, EFWD, 1FWD, EVCP, and
+  monitor (40 type codes)
 
 | Numeric
-| dtp-fixnum, dtp-small-ratio, dtp-single-float, dtp-dcuble-float, dtp-bignum, dtp-big-ratio, dtp-complex,
-dtp-spare-number (8 type codes)
+| dtp-fixnum, dtp-small-ratio, dtp-single-float, dtp-dcuble-float, dtp-bignum,
+dtp-big-ratio, dtp-complex, dtp-spare-number (8 type codes)
 
 | Instance
 | dtp-instance, dtp-list-instance, dtp-array-instance, dtp-string-instance
@@ -436,17 +603,17 @@ dtp-spare-number (8 type codes)
 
 === Data-Type Descriptions
 
-This section defines how each type of object is represented in storage and explains how the stored representations make
-use of type-coded objects.
+This section defines how each type of object is represented in storage and
+explains how the stored representations make use of type-coded objects.
 
 ==== Representations of Symbols
 
-The object reference to a symbol is a word of data type dtp-symbol or
-dtp-nil. The address field of this word contains the address of a header
-of type dtp-header-p. The header is followed by four words. The header’s
-header-type field equals %header-type-symbol and the address field of
-the header contains the address of the symbol’s name, a string: _The
-five words that constitute. a symbol object, in order, are:
+The object reference to a symbol is a word of data type dtp-symbol or dtp-nil.
+The address field of this word contains the address of a header of type
+dtp-header-p. The header is followed by four words. The header’s header-type
+field equals %header-type-symbol and the address field of the header contains
+the address of the symbol’s name, a string: _The five words that constitute. a
+symbol object, in order, are:
 
 ....
 0 SYMBOL-NAME-CELL address of the symbol’s name
@@ -458,88 +625,81 @@ five words that constitute. a symbol object, in order, are:
 
 See Figure 5.
 
-The special symbols nil and t reside in fixed memory locations: (vma=pma
-1611000) and (vma=pma 1011005), respectively. See the section".Wired
-Addresses". The fixed address and separate data type for nil speed up
-operations such as predicate functions.
+The special symbols nil and t reside in fixed memory locations: (VMA=PMA
+1611000) and (VMA=PMA 1011005), respectively. See the section".Wired Addresses".
+The fixed address and separate data type for nil speed up operations such as
+predicate functions.
 
 ==== Representations of Instances and Related Data Types
 
-The data types described in this section are used by. the flavor system,
-which deals with flavors, instances, instance variables, generic
-functions, and message passing. A flavor describes the behavior of a
-family of similar instances. An instance is an object. whose behavior is
-described by a flavor. An instance variable is a variable that has a
-separate value associated with each instance. A generic function is a
-function whose implementation dispatches on the flavor of its first
-argument. and selects a method that gets called as the body of the
-generic function. Generic functions are described in the section on
-function data types. See the section".Representation of Functions and
-Closures". In message pass.ag, an instance is called as a function; the
-function’s first argument, known as the message name, is a symbol that
-is dispatched upon to select a method that gets called.
+The data types described in this section are used by. the flavor system, which
+deals with flavors, instances, instance variables, generic functions, and
+message passing. A flavor describes the behavior of a family of similar
+instances. An instance is an object. whose behavior is described by a flavor. An
+instance variable is a variable that has a separate value associated with each
+instance. A generic function is a function whose implementation dispatches on
+the flavor of its first argument. and selects a method that gets called as the
+body of the generic function. Generic functions are described in the section on
+function data types. See the section".Representation of Functions and Closures".
+In message pass.ag, an instance is called as a function; the function’s first
+argument, known as the message name, is a symbol that is dispatched upon to
+select a method that gets called.
 
-See the Lisp documentation for more information about flavors,
-instances, instance variables, and messages.
+See the Lisp documentation for more information about flavors, instances,
+instance variables, and messages.
 
 =====  Flavor Instances
 
-The object. reference to an instance is a word of data type dtp-instance
-whose address field points to the instance structure. The stored
-representation of an instance consist of a header with type
-dtp-header-p, whose header-type field equals %header-type-instance. The
-words following the header of. the instance are the value cells of the
-instance variables. They contain either object references or an unbound
-marker. The cdr codes are not used. The address field of the header
-contains the address of the hash-mask field of a flavor-description
-structure. This description structure is called a flavor.
+The object. reference to an instance is a word of data type dtp-instance whose
+address field points to the instance structure. The stored representation of an
+instance consist of a header with type dtp-header-p, whose header-type field
+equals %header-type-instance. The words following the header of. the instance
+are the value cells of the instance variables. They contain either object
+references or an unbound marker. The cdr codes are not used. The address field
+of the header contains the address of the hash-mask field of a
+flavor-description structure. This description structure is called a flavor.
 
-A flavor contains information shared by all instances of that flavor.
-The architecturally defined fields of a flavor are:
+A flavor contains information shared by all instances of that flavor. The
+architecturally defined fields of a flavor are:
 
 Figure 5. Structure of a symbol object.
 
-- the array header, part of.the packaging of the structure (It must be a
-short- prefix array format, but.is not checked.)
+- the array header, part of.the packaging of the structure (It must be a short-
+prefix array format, but.is not checked.)
 - the named-structure symbol,. part of the. packaging of the structure
-- the size of an instance, used by the garbage collector and by the
-instance referencing instructions (%instance-ref and the like)
+- the size of an instance, used by the garbage collector and by the instance
+referencing instructions (%instance-ref and the like)
 - the hash mask, used by the hardware for method lookup
 - the handler hash table address, used by the hardware for method lookup
 - the name of the flavor, used by the type-of function
 - additional fields known only to the flavor system
 
-A handler table is a hash table that maps from a generic function or a
-message to the function to be invoked and a parameter to that function.
-Typically, the function is a method and the parameter is a mapping table
-used by that method to access instance variables. The mapping table is a
-simple, short-prefix ART-Q array. For speed, the format of handler
-tables is architecturally defined and known by hardware. Handler hash
-tables are packaged inside arrays, but this is software dependent, not
-hardware or architecture dependent.
+A handler table is a hash table that maps from a generic function or a message
+to the function to be invoked and a parameter to that function. Typically, the
+function is a method and the parameter is a mapping table used by that method to
+access instance variables. The mapping table is a simple, short-prefix ART-Q
+array. For speed, the format of handler tables is architecturally defined and
+known by hardware. Handler hash tables are packaged inside arrays, but this is
+software dependent, not hardware or architecture dependent.
 
-A handler table consists of a sequence of three-word elements. The
-address of the first word of the first element is in the flavor. Each
-element consists of:
+A handler table consists of a sequence of three-word elements. The address of
+the first word of the first element is in the flavor. Each element consists of:
 
-the key This is a generic function (dtp-generic-function), a message
-name (dtp-symbol), or nil, which is a default that matches averything
-(dtp-nil). -
+the key This is a generic function (dtp-generic-function), a message name
+(dtp-symbol), or nil, which is a default that matches averything (dtp-nil). -
 
 the method This is a program-counter value (dtp-even-pe or dtp-odd-pe)
-addressing the instruction at which the compiled function corresponding
-to the method is to be entered.
+addressing the instruction at which the compiled function corresponding to the
+method is to be entered.
 
-the parameter This is a parameter that. gets passed from the function or
-message to the method as an extra argument. If the parameter in the
-handler table is nil, the generic function or message is used as the
-parameter.
+the parameter This is a parameter that. gets passed from the function or message
+to the method as an extra argument. If the parameter in the handler table is
+nil, the generic function or message is used as the parameter.
 
-Method entries are normally of type dtp-even-pe or dtp-odd-pe. An
-interpreted method invokes a special entry point to the Lisp
-interpreter; this is implemented by storing the interpreter (a
-dtp-even-pe or dtp-odd-pe) as the method function and storing the actual
-method as the parameter. .
+Method entries are normally of type dtp-even-pe or dtp-odd-pe. An interpreted
+method invokes a special entry point to the Lisp interpreter; this is
+implemented by storing the interpreter (a dtp-even-pe or dtp-odd-pe) as the
+method function and storing the actual method as the parameter. .
 
 Each unused three-word slot in the handler hash table, plus a fence slot
 at the end of the table, is filled with nil, a default method function,
@@ -616,12 +776,14 @@ Position | Symbolic Name | Description |
 <26:0> | %%BIGNUM-LENGTH | the number of fixnums that follow |
 --
 
-Note that the hardware does not.make use of these header-word fields. Following the header is a sequence of fixnums that
-make up the bignum. The least- significant part of the bignum is stored in the first fixnum. The fixnums are two’s
-complement and use all 32 bits for each digit. The bignum sign bit is the value of all the most significant bits not
-explicitly stored in the bignum. Therefore, `-1_32`. would occupy 2 words: the header with sign 1 and length 1, and a
-fixnum of 0. (The notation `-1_32` stands for a two’s complement -1 that has been multiplied by 2^32, that is, shifted
-left 32 places.)
+Note that the hardware does not.make use of these header-word fields. Following
+the header is a sequence of fixnums that make up the bignum. The least-
+significant part of the bignum is stored in the first fixnum. The fixnums are
+two’s complement and use all 32 bits for each digit. The bignum sign bit is the
+value of all the most significant bits not explicitly stored in the bignum.
+Therefore, `-1_32`. would occupy 2 words: the header with sign 1 and length 1,
+and a fixnum of 0. (The notation `-1_32` stands for a two’s complement -1 that
+has been multiplied by 2^32, that is, shifted left 32 places.)
 
 |—-|———-|——|————————| | NM | HEADER-I | BIGN | 1000000000000000000001 |
 |—-|———-|——|————————| | 39 | | | 26 0 | |—-|———-|——|————————|
@@ -640,8 +802,8 @@ and a fixnum that happens to be `-1_31`.
 
 ===== Smail-Ratio Representation
 
-A small ratio is represented by an immediate object of data type dtp-small-ratio. The data field is divided into two
-subfields as follows:
+A small ratio is represented by an immediate object of data type
+dtp-small-ratio. The data field is divided into two subfields as follows:
 
 [verse]
 --
@@ -656,9 +818,10 @@ CC | SM-RAT | NUMERATOR | DENOMINATOR |
 39 38 | 37 32 | 31 16 | 15 0 |
 --
 
-The illegal values are so because of either division by zero, or because the number is an integer and should be
-represented as such. The ratio is reduced to lowest terms. Note that the hardware does. not make. use of the fields of
-the small ratio.
+The illegal values are so because of either division by zero, or because the
+number is an integer and should be represented as such. The ratio is reduced to
+lowest terms. Note that the hardware does. not make. use of the fields of the
+small ratio.
 
 Figure 7. Structure of an object of type dtp-bignum
 
@@ -772,7 +935,7 @@ Code | Symbolic Name | Description |
 --
 
 A typical, that is, not compact, two-word cons -has cdr-normal in the
-cdr-code tag of its first word and edr-nil in that-of its second. The
+cdr-code tag of its first word and `cdr-nil` in that-of its second. The
 ear and edr operations - ignore the edr. code-in the second word, but it
 is helpful to the garbage collector.
 
@@ -782,7 +945,7 @@ cdr-nil. The cdr code of the second-to-last word may be cdr-normal or
 cdr-next. The cdr code of each of the remaining words is edr-next. Note
 that when a cons consists of exactly two words, the cdr-normal form is
 used in its representation, and the cdr code of the second word is
-always edr-nil. In a two-element. list consisting of two words, the edr
+always `cdr-nil`. In a two-element. list consisting of two words, the edr
 code of the first word is edr-next.
 
 Note that a dtp-list pointer can point into the middle of a list
@@ -790,7 +953,7 @@ representation. This happens any time edr-next is used; for instance, if
 a list of four elements is fully cdr-coded – that is, it is stored in
 compact form – its representation consists of four words. The contents
 of each word is an element of the list. The cdr codes of the first three
-words are cdr-next; the cdr code of the last word is edr-nil. An object
+words are cdr-next; the cdr code of the last word is `cdr-nil`. An object
 reference to the cddr of this list has data type dtp-list and the
 address of the third word. The garbage collector protects the entire
 block of storage if any word in it is referenced. See Figure 12.
@@ -799,14 +962,14 @@ The rplacd operation interacts with cdr coding. An illustration of this
 was presented in an earlier section. See the section".Forwarding
 (Invisible) Pointers". rplaed of a cons represented with cdr-normal
 simply stores into the second word. But rplaed of a cons represented
-with cdr-next or edr-nil must change the representation so that the cdr
+with cdr-next or `cdr-nil` must change the representation so that the cdr
 is represented explicitly before it can be changed.
 
 Figure 11. Ordinary and compact list structures.
 
 Figure 12, — An object reference to the eddr ofa list. ..-
 
-There is one exception, if the cdr’is being changed to nil, the edr-nil
+There is one exception, if the cdr’is being changed to nil, the `cdr-nil`
 cdr code is used to represent it. Use of rplaed can split an object
 representation into two independent object. representations, one of
 which might. then be. garbage-collected.
@@ -815,7 +978,7 @@ dtp-header-forward is used to implement list forwarding. If the
 data-type tag (of the car) is dtp-header-forward, the cdr code is
 ignored (except by the garbage
 
-. collector, which expects it to be edr-nil). The address in the
+. collector, which expects it to be `cdr-nil`). The address in the
 forwarding pointer points to a pair of words that contain the car and
 edr.
 
@@ -1057,7 +1220,7 @@ L-machine they are very slow).
 
 The four array-register words on the stack are, in order:
 
-Array Object reference Control ‘word. a fixnum containing the following
+Array Object reference `Control` ‘word. a fixnum containing the following
 packed fields:
 
 Position Bits Symbolic Name Description <31:38> 2 ZZELEMENT-TYPE One of:
@@ -1107,7 +1270,7 @@ L-machine they are very slow).
 
 The four array-register words on the stack are, in order:
 
-Array Object reference Control word a fixnum containing the following
+Array Object reference `Control` word a fixnum containing the following
 packed fields: Position Bits Symbolic Name Description <31:38> 2
 ZZELEMENT-TYPE One of: fixnum, character, ‘ boolean, or object-reference
 <29:27> 3 Z2ZBYTE-PACKING Base 2 logarithm (@ to 5) of the number of
@@ -1238,7 +1401,7 @@ information is used mainly by the debugger (also by the compiler and the
 interpreter). The car of this list is the name of the function and the
 cdr of the list is an a-list containing information such as names and
 stack locations of local variables. The cdr code of the first. word in
-the suffix is edr-nil (encoded as 1), which is the illegal instruction
+the suffix is `cdr-nil` (encoded as 1), which is the illegal instruction
 sequencing code. This word, with this cdr code, serves as a".fenc".
 that prevents instruction fetchahead from running past the end of the
 body of a function.
@@ -1253,7 +1416,7 @@ arguments:is larger than 13, in which case the next two 4-bit bytes
 contain the number of arguments, cr 15 if the compiler does not know the
 number of arguments or does not want the linker to bypass the entry
 instruction of the called fumction. If the linkage information
-terminates with edr-nil before all of the full-word function-calling
+terminates with `cdr-nil` before all of the full-word function-calling
 instructions have been accounted for, the missing 4- bit bytes are
 assumed to contain 15.
 
@@ -1356,7 +1519,7 @@ Set".
 
 ==== Program-Counter Representations
 
-The program counter (pc) is a register in the I machine that contains
+The program counter (PC) is a register in the I machine that contains
 the virtual address of the currently executing instruction. Since most
 instructions are packed two-to-a-word, that address has to include
 information about which half-word instruction is executing. This
@@ -1431,9 +1594,9 @@ art-fisnum, depending on the semantics of the buffer memory.
 ‘dtp-physical-address always points to physical memory, not virtual
 memory, and is therefore an immediate data type. It does not replace the
 need for the high part of virtual space mapping to a fixed portion of
-the physical space, known as vma=pma virtual pointers. vma=pma is still
+the physical space, known as VMA=PMA virtual pointers. VMA=PMA is still
 needed for certain structures such as the paging system, which requires
-the PC to have a vma=pma pointer field.
+the PC to have a VMA=PMA pointer field.
 
 === Data-Type Code Assignments
 
@@ -1520,7 +1683,7 @@ types can be used
 perfectly normally, but there are no built-in hardware operations that
 do anything with them. i
 
-==== 1.3.5 Special Marker for Garbage Collector
+==== Special Marker for Garbage Collector
 
 One type as shown in Table 7:
 
@@ -1529,7 +1692,7 @@ Description Code 45 DTP~GC-FORWARD Object-moved flag for
 
 garbage collector
 
-==== 1.3.6 Data Types for Program Counter Values
+==== Data Types for Program Counter Values
 
 Two types as shown in Table 8:
 
@@ -1544,7 +1707,7 @@ instruction
 
 47 DTP-ODD~-PC PC at second. instruction in word
 
-==== 1.3.7 Full-Word Instruction Data Types
+==== Full-Word Instruction Data Types
 
 Eight types-as shown in Table 9: Table 9. Full-Word Instruction Data
 Types
@@ -1573,7 +1736,7 @@ desirable 57 DTP-CALL-GENERIC-PREFETCH Same as DTP-CALL-GENERIC
 
 but prefetch is desirable
 
-==== 1.3.8 Half-Word Instruction Data Types
+==== Half-Word Instruction Data Types
 
 Sixteen types as shown in Table 10:
 
@@ -1592,7 +1755,7 @@ information described in the chapter on the instruction set. The
 instruction in bits <17-0> is executed before the instruction in bits
 <85-18>. See the section".Instruction Sequencing".
 
-=== 1.4 Appendix: Comparison of 3600-Family and I-Machine Data Representations
+=== Appendix: Comparison of 3600-Family and I-Machine Data Representations
 
 The I machine and 3600-family machine data representations are similar
 in the following ways:
@@ -1687,79 +1850,69 @@ computers. This is elaborated on in a later section.
 These are the main differences between 3600-family arrays and I-machine
 arrays:
 
-« The format of the I-machine prefix header is simpler and contains more
+- The format of the I-machine prefix header is simpler and contains more
 explicit information about the array.
 
-¢ The optional array leader is stored before (at lower memory locations)
-the array’s header on the I machine and after it .on 3600-family
-machines. An I machine leader has its own header; a 3600-family leader
-does not.
+- The optional array leader is stored before (at lower memory locations) the
+array’s header on the I machine and after it on 3600-family machines. An I
+machine leader has its own header; a 3600-family leader does not.
 
-e The I machine has two kinds of array prefix, 3600-family machines six,
-Figure 20 is a detailed comparison of the corresponding array prefix
-structures, their fields, and the maximum values of the fields.
+- The I machine has two kinds of array prefix, 3600-family machines six, Figure
+20 is a detailed comparison of the corresponding array prefix structures, their
+fields, and the maximum values of the fields.
 
 ==== Compiled Function Differences
 
-The major difference between the data representations of 3600- family
-machines Loe -and I machines is in the structure of compiled functions.
-no :
+The major difference between the data representations of 3600-family machines
+and I machines is in the structure of compiled functions:
 
-e 3600- family. machines have an  external reference table, which is
-stored a
+- 3600-family machines have an _external reference table_, which is stored
+between the compiled function prefix and the body of instructions. I machines,
+which omit this table, store the contents of this table – constants and
+locatives – _in line_ with the instructions, using the cdr-code field of the
+packed instruction to indicate sequencing.
 
-between the compiled function prefix and the body of instructions. I>
-machines, which omit. this table, store: the contents. of: this table –
-constants and locatives – in line with the. instructions, using the
-edr-code. field of the packed instruction to indicate sequencing.
+- 3600-family machines explicitly store information about the number and type of
+arguments supplied or required in a field of the compiled function prefix,
+I-machines do not store this information in the prefix: it is supplied in the
+entry instruction.
 
-ng. 3600-family. machines. explicitly store information about: the
-number: and. type oo
+- 3600-family machines store | in the compiled function's prefix a pointer to
+debugging information and other information required by the compiler or
+interpreter. I machines store this pointer in a suffix that follows the body of
+instructions. They also store linkage information and additional data for the
+function in this suffix. 3600-family machines have no such suffix.
 
-of arguments supplied or required in a field of the compiled function
-prefix, I- machines do not store this information in the prefix: it is
-supplied in the entry instruction.
-
-« 3600- family machines stare | in the compiled function’ S prefix a
-pointer to debugging information and other information required by the
-compiler or interpreter. I machines store this pointer in a suffix that
-follows the body of instructions. They also store linkage information
-and additional data for the function in this suffix. 8600-family
-machines have no ‘such suffix.
-
-«|Format differences: 3600-family machines have a four-word compiled
-function prefix; I machines have a: two-word prefix and an
-at-least-one-word suffix.
-
-_ |8600-family machines have seventeen-bit instructions and use the
-cedr-code field for the high-order bit of each of the two instructions
-packed in a — dtp-fixnum word. I machines have eighteen-bit instructions
-and use. the low-order four bits of the data-type field for the
-high-order I bits of the odd - instruction.
+- Format differences: 3600-family machines have a four-word compiled function
+prefix; I machines have a two-word prefix and an at-least-one-word suffix.
+3600-family machines have seventeen-bit instructions and use the cdr-code field
+for the high-order bit of each of the two instructions packed in a dtp-fixnum
+word. I machines have eighteen-bit instructions and use the low-order four bits
+of the data-type field for the high-order I bits of the odd instruction.
 
 == Memory Layout and Addressing
 
 === Address Space
 
 The architecture provides a single address space which is shared by all
-processes. An address is thirty-two bits wide, and specifies the
-location of a word.
+processes. An address is thirty-two bits wide, and specifies the location of a
+word.
 
 *****
 NOTE: A word is 16 bits, i.e. 2 bytes. Addresses refer to quad-words (4-byte aligned), then split into even / odd. 
 *****
 
 The address space is divided into thirty-two zones, each containing 128
-megawords. The thirty-two zones are variously assigned to several
-sections as shown in the table below. Note that ephemeral space is a
-subset of the virtual address space.
+megawords. The thirty-two zones are variously assigned to several sections as
+shown in the table below. Note that ephemeral space is a subset of the virtual
+address space.
 
 *****
 NOTE: Zones are numbered 0 to 31.
 *****
 
 
-[cols="v<,v<,a<,a<,a<", options="header"]
+[cols="m<,m<,a<,a<,a<", options="header"]
 |===
 | Octal |Hex | Name | Zone | Comment
 | 0o000_0000_0000 : 0o007_7777_7777 | 0x00_00_00_00 : 0x03_FF_FF_FF
@@ -1791,9 +1944,9 @@ allows.each zone to be specified as either old or new space.
 [cols="v,a", options="header"]
 |===
 |Position | Meaning
-|<81:27> | Zone number (zones 0 through 30)
-|<81:8> | Virtual Page Number (VPN – 512K virtual pages per zone)
-|<7:0> | Offset within Page (256 words per page)
+|<81:27>  | Zone number (zones 0 through 30)
+|<81:8>   | Virtual Page Number (VPN – 512K virtual pages per zone)
+|<7:0>    | Offset within Page (256 words per page)
 |===
 
 The virtual address space is partitioned by software into regions, areas, and
@@ -1835,32 +1988,31 @@ the section <<_revision_0_implementation_memory_features>>.
 
 ==== Unmapped Addresses
 
-The upper one-thirty-second of the virtual address space is used to
-directly address the low portion of the physical address space. The
-upper five bits of these addresses are translated from all ones to all
-zeros. They. are used primarily to access page tables and paging
-software, to avoid recursive translation faults. These addresses are
-sometimes called the virtual=physical or vma=pma region.
+The upper asciimath:[1 // 32^(nd)] of the virtual address space is used to
+directly address the low portion of the physical address space. The upper five
+bits of these addresses are translated from all ones to all zeros. They are used
+primarily to access page tables and paging software, to avoid recursive
+translation faults. These addresses are sometimes called the virtual=physical or
+VMA=PMA region.
 
-Note that there is an aliasing situation for some mapped pages. They
-have two addresses, one virtual.and one vma=pma. A virtual data cache
-would have to be careful to maintain coherence when writing via one of
-these addresses and reading via another. A VMA need not translate to a
-page also accessible by VMA=PMA, (VMA=PMA cannot reference the entire
-physical address space.)
+Note that there is an aliasing situation for some mapped pages. They have two
+addresses, one virtual.and one VMA=PMA. A virtual data cache would have to be
+careful to maintain coherence when writing via one of these addresses and
+reading via another. A VMA need not translate to a page also accessible by
+VMA=PMA, (VMA=PMA cannot reference the entire physical address space.)
 
 ==== Wired Addresses
 
-A portion of the system needs to be wired down, that is, not subject to
-eviction of its pages from main memory. Most obviously, the software
-that handles page faults needs to be wired.
+A portion of the system needs to be wired down, that is, not subject to eviction
+of its pages from main memory. Most obviously, the software that handles page
+faults needs to be wired.
 
-There are a number of architecturally defined data structures that
-reside at fixed physical locations. A system implementation must provide
-memory that responds to these addresses. These locations are as follows
-(all addresses relative to the beginning of vma=pma space):
+There are a number of architecturally defined data structures that reside at
+fixed physical locations. A system implementation must provide memory that
+responds to these addresses. These locations are as follows (all addresses
+relative to the beginning of VMA=PMA space):
 
-[cols="v,a"]
+[cols="m,a"]
 |===
 | 0o0_0000_0000 : 0o0_0077_7777 | FEP code, data, and stacks (256K)
 | 0o0_0100_0000 : 0o0_0100_7777 | Trap vectors (refer to chapter 5)
@@ -1885,103 +2037,104 @@ on the 3600.
 === GC Support
 
 Two internal processor registers designate sections of the address space as
-oldspace. These registers can be written via the %write-internal-register
+oldspace. These registers can be written via the `%write-internal-register`
 instruction, allowing the designations to change during execution.
 
-The zone-oldspace register contains a bit map that specifies for each zone of
-dynamic space (virtual space minus ephemeral space) whether the zone is |
+The `zone-oldspace` register contains a bit map that specifies for each zone of
+dynamic space (virtual space minus ephemeral space) whether the zone is 
 newspace or oldspace. A set bit. indicates its corresponding zone is oldspace.
 Bit 0, specifying zone .0, is ignored since that zone is ephemeral space. Bit 31
-specifies zone 31, which is vma=pma space. Since vma=pma space cannot be
+specifies zone 31, which is VMA=PMA space. Since VMA=PMA space cannot be
 condemned, bit 31 must always be 0 (the hardware may or may not ignore it).
 
-The ephemeral-oldspace register contains a bit map that specifies for each
+The `ephemeral-oldspace` register contains a bit map that specifies for each
 ephemeral level which half of the level is newspace and which half is oldspace.
 A set bit indicates the upper half is oldspace.
 
-This scheme never incurs false traps during ephemeral garbage collection, and —
+This scheme never incurs false traps during ephemeral garbage collection, and
 incurs no false traps during dynaniic garbage collection in the usual case where
-_ the software allocates addresses according to a certain convention. A false
-trap is a transport trap for reading a pointer to’a zone marked as oldspace in
-the zone- oldspace register in which the pointer is not actually pointing at a
-region in ~ 7 oldspace, so the trap handler must recover using the
-pht.transport-trap bit. This — _ only happens if the software uses a zone in a
-mixed way, where part of it is - oldspace and part is newspace. The first zone
-of the virtual address space is always used for ephemeral space, while each of
-the remaining zones can be dedicated to static space, dynamic new/copyspace, or
+the software allocates addresses according to a certain convention. A false trap
+is a transport trap for reading a pointer to a zone marked as oldspace in the
+zone oldspace register in which the pointer is not actually pointing at a region
+in oldspace, so the trap handler must recover using the
+`pht.transport-trap` bit. This only happens if the software uses a zone in a
+mixed way, where part of it is oldspace and part is newspace. The first zone of
+the virtual address space is always used for ephemeral space, while each of the
+remaining zones can be dedicated to static space, dynamic new/copyspace, or
 dynamic oldspace. After a garbage collection completes, zones dedicated to
-dynamic oldspace become free and _ can be reallocated either to static or to
+dynamic oldspace become free and can be reallocated either to static or to
 dynamic space, as desired.
 
 === Address Translation
 
 Virtual addresses are mapped before being used to address physical memory.
-Mapping translates the virtual page number field of the virtual address into a
-physical page number. Mapping also checks for various exceptions that may result
-from attempting a memory reference and records information about the reference
-useful to software.
+Mapping translates the virtual page number (**VPN**) field of the virtual
+address into a physical page number (**PNP**). Mapping also checks for various
+exceptions that may result from attempting a memory reference and records
+information about the reference useful to software.
 
 ==== Page Hash Table
 
 The VPN of a virtual address is translated using the Page Hash Table, or
-PHT. The PHT is the".backing stor". for the hardware map cache: in the
-event of a -map cache miss, the VPN of a virtual address is translated
-by looking up its entry in the PHT, checking the access attributes, and
-loading the map cache with the result. Unlike the 3600, the I-machine
-uses a translation algorithm that is. implemented entirely In microcode,
-so map misses are guaranteed not to cause faults (pelsring) for resident
-pages.
+PHT. The PHT is the "backing store" for the hardware map cache: in the event of
+a map cache miss, the VPN of a virtual address is translated by looking up its
+entry in the PHT, checking the access attributes, and loading the map cache with
+the result. Unlike the 3600, the I-machine uses a translation algorithm that is
+implemented entirely In microcode, so map misses are guaranteed not to cause
+faults (`pclsring`) for resident pages.
 
-There are a number of attributes associated with each page. These
-control access to data in the page, and also record various side effects
-on the page. These attributes are stored in the PHT along with the
-translation information. Some of them are also stored in the map cache.
+There are a number of attributes associated with each page. These control access
+to data in the page, and also record various side effects on the page. These
+attributes are stored in the PHT along with the translation information. Some of
+them are also stored in the map cache.
 
-Each entry in the PHT consists two words, a".ke". and a".valu". (approximately).
-Both words’ data types are `dtp-fixnum`. The format of an entry is as follows:
+Each entry in the PHT consists two words, ai "key" and a "value"
+(approximately). Both words’ data types are `dtp-fixnum`. The format of an entry
+is as follows:
 
 
-[cols="v,v,a,a", options="header"]
+[cols="m,m,m,a", options="header"]
 |===
-| Word | Position | Field Name           | Comments
-| PHT0  | <39>    | spare                |
-|       | <38>    | end- collision-chain | 0 keep searching, 1 stop
-|       | <37:32> | data-type            | dtp-fimum
-|       | <31:8>  | vpn                  | -1 for deleted entries
-|       | <7>     | fault-request        | If 1, this page cannot be accessed in any way
-|       | <6>     | pending              | For. software use only (see the notes section)
-|       | <5:4>   | spare                | For software use only
-|       | <3:0>   | age                  | Set to 0 when this entry is loaded into the map
-| PHT1  | <39:38> | spare                |
-|       | <37:32> | data-type            | dtp- fixnum
-|       | <31:8>  | ppn                  | (allows 32-bit physical addresses)
-|       | <7>     | modified             | If 1, this page has been written and probably differs from its on-disk representation
-|       | <6>     | write-protect        | If 1, this page cannot be written
-|       | <5>     | cache-inhibit        | If 1, locations in this page 7 are not cached 
-|       | <4>     | transport-trap       | If 1, transport-traps on this page are enabled
-|       | <3:0>   | ephemeral-reference  | Ephemeral groups referenced by this page
+| Word  | Position | Field Name           | Comments
+| PHT0  | <39>     | spare                |
+|       | <38>     | end-collision-chain | 0 keep searching, 1 stop
+|       | <37:32>  | data-type            | `dtp-fixnum`
+|       | <31:8>   | VPN                  | -1 for deleted entries
+|       | <7>      | fault-request        | If 1, this page cannot be accessed in any way
+|       | <6>      | pending              | For software use only (see the notes section)
+|       | <5:4>    | spare                | For software use only
+|       | <3:0>    | age                  | Set to 0 when this entry is loaded into the map
+|       |          |                      |
+| PHT1  | <39:38>  | spare                |
+|       | <37:32>  | data-type            | `dtp-fixnum`
+|       | <31:8>   | PPN                  | (allows 32-bit physical addresses)
+|       | <7>      | modified             | If 1, this page has been written and probably differs from its on-disk representation
+|       | <6>      | write-protect        | If 1, this page cannot be written
+|       | <5>      | cache-inhibit        | If 1, locations in this page are not cached 
+|       | <4>      | transport-trap       | If 1, transport-traps on this page are enabled
+|       | <3:0>    | ephemeral-reference  | Ephemeral groups referenced by this page
 |===
 
 
-An invalid PHT entry has -1 in-its VPN field; since that indicates a VPN=PPN
+An invalid PHT entry has -1 in its VPN field; since that indicates a VPN=PPN
 address, it does not usurp any possibly useful page.
 
 The following attributes control access to data in the page. If an instruction
-attempts an access not allowed by one of these attributes, a fault will
-be generated. See the section".Translation Algorithm". Note that an
-implementation should be careful not to cause spurious faults when
-accessing ahead of instruction execution. 
+attempts an access not allowed by one of these attributes, a fault will be
+generated. See the section <<_translation_algorithm>>. Note that an implementation
+should be careful not to cause spurious faults when accessing ahead of
+instruction execution.
 
 [cols="v,a"]
 |===
 | fault-request
 | fault-request, when 1, indicates that any access to this page should cause a
-  fault. When 0, accesses are: allowed according to the write-protect bit.
+  fault. When 0, accesses are allowed according to the write-protect bit.
 
 | write-protect
 | write-protect, when 1, indicates that any attempt to write data into the page
   should cause a fault. When 0, data can be written into the page. Note: just
-  because a page is write-protected does. not. mean it is not modified; there
+  because a page is write-protected does not mean it is not modified; there
   are several mechanisms that circumvent this bit. See the modified bit below.
 
 | transport-trap
@@ -1990,8 +2143,8 @@ accessing ahead of instruction execution.
 
 Words are potentially pointers to oldspace if their data-type field contains a
 pointer type and their address field satisfies a condition based on the
-address-space referenced: See the section <<_lisp_machine_data_types>>. The
-condition for a reference to ephemeral space is that the ephemeral-oldspace
+address-space referenced. See the section <<_lisp_machine_data_types>>. The
+condition for a reference to ephemeral space is that the `ephemeral-oldspace`
 register indicates the half of the ephemeral level referenced is oldspace. The
 condition for a reference to dynamic space is that the zone-oldspace register
 indicates the zone referenced is oldspace. References to physical space never
@@ -2001,8 +2154,7 @@ If the pointer satisfies the above conditions and the `transport-trap` bit is
 set for the page, then a transport trap is taken. The garbage collector is
 responsible for deciding whether or not the pointer truly points to oldspace.
 
-See the section".Revision 0 Implementation Memory Features".
-
+See the section <<_revision_0_implementation_memory_features>>.
 |===
 
 
@@ -2010,7 +2162,7 @@ The following attributes record various side effects that have occurred
 to data in the page. The hardware maintains these attributes for use by
 the software.
 
-[cols="v,a"]
+[cols="m,a"]
 |===
 | age <3:0>
 | The age field is set to 0 when an instruction accesses data in this page, or
@@ -2027,7 +2179,7 @@ appear in the PHT rather than in order of increasing physical addresses. Because
 of this, PHT insertion and deletion may not generally be allowed to relocate PHT
 entries.
 
-The age is stored only. in the PHT. By definition, when an entry is in the map
+The age is stored only in the PHT. By definition, when an entry is in the map
 cache, the age is 0.
 
 | modified
@@ -2046,6 +2198,7 @@ not it has to seen this page and rescue objects it references, when a portion of
 ephemeral space is being garbage-collected.
 |===
 
+
 The PHT is a hash table with buckets of four entries of two words each. The
 number of buckets must be a power of two, and is chosen to yield between 38% and
 70% density (PHT density is pages-of-physical-memory/entries-in-pht), Within
@@ -2054,51 +2207,50 @@ PHT1 words. The inner loop of the lookup algorithm searches all the PHT0 words
 in bucket for a given VPN, using block-mode memory cycles but skipping over the
 PHT1 words.
 
-The PHT is allocated in vma=pma space at boot time (any time before the first
-map cache miss). There are two processor registers describing the PHT: PHT-BASE
-and PHT-MASK. PHT-BASE is set to the physical address of the first word in the
-PHT, and PHT-MASK is set to `(lsh (1- pht-number-of-buckets) 3)`. See the
+The PHT is allocated in VMA=PMA space at boot time (any time before the first
+map cache miss). There are two processor registers describing the PHT: `PHT-BASE`
+and `PHT-MASK`. `PHT-BASE` is set to the physical address of the first word in the
+PHT, and `PHT-MASK` is set to `(lsh (1- pht-number-of-buckets) 3)`. See the
 section <<_revision_0_implementation_memory_features>>.
 
 ==== PHT Lookup Algorithm
 
-The PHT lookup algorithm is a rehash-on-collision hash lookup.. The
-hash/rehash algorithm generates a sequence of buckets to be probed; each
-bucket is linearly scanned, at maximum memory bandwidth, for the desired
-VPN. The lookup terminates ‘successfully. when the desired entry is found, or
-unsuccessfully. after. scanning a bucket at the end of a collision chain. The
-lookup is guaranteed to terminate because the rehash algorithm guarantees that
-every bucket will be probed, and Lisp guarantees that at least one bucket in the
-PHT will have end- collision-chain=1. [when there are too many collisions in the
-PHT to satisfy this constraint, the PHT gets rebuilt – a time-consuming
-operation that will. probably never happen].
+The PHT lookup algorithm is a rehash-on-collision hash lookup. The hash/rehash
+algorithm generates a sequence of buckets to be probed; each bucket is linearly
+scanned, at maximum memory bandwidth, for the desired VPN. The lookup terminates
+successfully when the desired entry is found, or unsuccessfully after scanning a
+bucket at the end of a collision chain. The lookup is guaranteed to terminate
+because the rehash algorithm guarantees that every bucket will be probed, and
+Lisp guarantees that at least one bucket in the PHT will have
+end-collision-chain=1. [when there are too many collisions in the PHT to satisfy
+this constraint, the PHT gets rebuilt – a time-consuming operation that will.
+probably never happen].
 
 The collision-count mechanism is similar to that in the 3600; the PHT insertion
 and deletion routines maintain a per-bucket count of the number of entries that
 hashed to a particular bucket, but could not be stored there because of
 collisions. However, the actual representation of the collision counts (either
-in a separate table or in some of the spare bits in PHTO) is not used by the
+in a separate table or in some of the spare bits in PHT0) is not used by the
 hardware. Instead, the software distills the collision count for each bucket
-into a single bit, pht.end- collision-chain, which is 0 if the collision count
-is non-zero, otherwise 1. (in SYSDEF, this is called
-%%pht0-end-collision-chain,) pht.end-collision-chain is only significant for the
-last entry of a bucket.
+into a single bit, `pht.end-collision-chain`, which is 0 if the collision count
+is non-zero, otherwise 1. (in `SYSDEF`, this is called
+`%%pht0-end-collision-chain`.) `pht.end-collision-chain` is only significant for
+the last entry of a bucket.
 
-The hash function used for the initial probe of the PHT is computed by a bit-
-shuffle-and-xor hashbox, the exact description of which is given below. This
+The hash function used for the initial probe of the PHT is computed by a
+bit-shuffle-and-xor hashbox, the exact description of which is given below. This
 hashbox maps 24-bit virtual page numbers inte PHT bucket numbers, which span
 eleven bits.in a minimal (1M main memory) configuration, thirteen bits in a
 typical (4M main memory) configuration, and twenty-three bits in the maximum
 configuration (4096M main memory). However, its output is actually left-shifted
 by three bits to convert it directly into a PHT offset, saving a cycle in the
-microcode. The field pht-mask is similarly left-shifted.
+microcode. The field `pht-mask` is similarly left-shifted.
 
-This hash function was chosen presuming a page size of `2^8` words, a quantum size
-of `2^16` words, a half-ephemeral-level size of `2^21` words, and a zone size of
-`2^27` words. All bit numbers are in decimal.
+This hash function was chosen presuming a page size of `2^8` words, a quantum
+size of `2^16` words, a half-ephemeral-level size of `2^21` words, and a zone
+size of `2^27` words. All bit numbers are in decimal.
 
-**PHT-OFFSET<0..25> **
-
+PHT-OFFSET<0..25> ::
 [cols="v"]
 |===
 | HASH< 0> = 0
@@ -2129,22 +2281,26 @@ of `2^16` words, a half-ephemeral-level size of `2^21` words, and a zone size of
 | HASH<25> = VMA<23> ⨂ VMA<29>
 |===
 
+****
+NOTE: Note the change from `D` to `⨂`.
+****
+
 This hashbox is accessible by Lisp via an internal register.
 
-The first bucket probed is computed by the hashbox described above,
-modulo the table size. If that probe fails, a linear pseudo-random
-number generator, initialized to 17*vpn-+i and advanced by 17x11,
-defines the rehash sequence. A Lisp expression of the lookup algorithm
-is given below:
+The first bucket probed is computed by the hashbox described above, modulo the
+table size. If that probe fails, a linear pseudo-random number generator,
+initialized to asciimath:[17 * VPN + 1] and advanced by asciimath:[17 * x + 1], defines the
+rehash sequence. A Lisp expression of the lookup algorithm is given below:
 
 [source,common-lisp]
 ----
 ;; This is just 17x +1, mod 2^32,
 (defmacro pht-next (state)
   `(sys:%32-bit-plus
-    (sys: %32-bit-plus
-          (sys:%logdpb ,state (byte 28. 4.) 0)
-          ,state) 1))
+    (sys:%32-bit-plus
+       (sys:%logdpb ,state (byte 28. 4.) 0)
+       ,state)
+    1))
 
 (defun pht-lookup (vpn)
   (flet ((search-bucket (pht-offset)
@@ -2168,49 +2324,49 @@ is given below:
        do (search-bucket (logand (lsh state 3) pht-mask)))))
 ----
 
-See the section".Revision 0 Implementation Memory Features". A new entry is
+See the section <<_revision_0_implementation_memory_features>>. A new entry is
 inserted into the PHT by hashing/rehashing the VPN into successive bucket
 numbers and searching each bucket for an invalid entry to reuse. The collision
 bucket for an invalid entry to reuse. The collision count of each full bucket in
 the hash sequence is incremented. When incrementing a bucket’s collision count
-from 0 to 1,.pht.end-collision-chain for that bucket must be set to 0.
+from 0 to 1,`pht.end-collision-chain` for that bucket must be set to 0.
 
 An entry is deleted from the PHT by hashing/rehashing the VPN into successive
 bucket numbers and searching each bucket for the entry. The collision-count of
 each bucket in the hash sequence (excepting the one that actually contains the
 entry) is decremented. If a collision count is decremented below 0, you have
-tried to delete a nonexistent entry and have corrupted. the table by
+tried to delete a nonexistent entry and have corrupted the table by
 inappropriately decrementing collision counts (the 3600 just crashes in this
-case), When decrementing a bucket’s collision count from 1 to 0,
-pht.end-collision-chain for that bucket should be set to 1. Deleted entries are
-marked by setting their VPN field to -1.
+case). When decrementing a bucket’s collision count from 1 to 0,
+`pht.end-collision-chain` for that bucket should be set to 1. Deleted entries
+are marked by setting their VPN field to -1.
 
 ==== Translation Algorithm
 
-When the attributes of a resident. virtual page are changed, either by Lisp
-doing something like aging or replacing the page or by a memory reference
-causing the age, modified, and/or ephemeral-reference attributes to change, the
-PHT and the map cache must be synchronized so they both contain the same
-information. This is a cache/backing-store sort.of problem, and the same sort of
-solutions apply. We use a".write-throug". strategy, so the map cache and the PHT
-are always consistent.
+When the attributes of a resident virtual page are changed, either by Lisp doing
+something like aging or replacing the page or by a memory reference causing the
+age, modified, and/or ephemeral-reference attributes to change, the PHT and the
+map cache must be synchronized so they both contain the same information. This
+is a cache/backing-store sort of problem, and the same sort of solutions apply.
+We use a "write-through" strategy, so the map cache and the PHT are always
+consistent.
 
 When the storage system wants to change the attributes of a resident page, it
 updates the PHT entry for the page, and simply invalidates the map cache entry
-for that page (if one exists). See the section".Internal Registers". The next
+for that page (if one exists). See the section <<_internal_registers>>. The next
 reference to the page will reload the map.
 
-When a memory reference needs to change the attribute. of a page that has an
-entry in the map cache (modified and ephemeral-reference are the only fields it
-can change), a microcode trap handler is invoked to update the corresponding
-fields in the PHT, Whether or not the PHT. update occurs before or after the
+When a memory reference needs to change the attribute of a page that has an
+entry in the map cache (`modified` and `ephemeral-reference` are the only fields
+it can change), a microcode trap handler is invoked to update the corresponding
+fields in the PHT, Whether or not the PHT update occurs before or after the
 reference is implementation dependent.
 
 The translation/access-checking process for a memory read cycle is:
 
 [source]
 ----
-if VMA is of type dtp- physical-address
+if VMA is of type dtp-physical-address
     access-bits := write-protect=0,
                      transport-trap=0,
                      modified=1,
@@ -2289,27 +2445,28 @@ else
     take page-not-resident pre-trap
 ----
 
-The fake access-bits for VMA=PMA and dtp-physical-address addresses are chosen
+The fake access-bits for VMA=PMA and` dtp-physical-address` addresses are chosen
 to prevent PHT update traps (those addresses are not in the PHT, so you could
 not update them if you tried). There are two very important consequences of
-this: vma=pma or dtp-physical-address write cycles do not update the
-ephemeral-reference bits, and vma=pma or dtp-physical-address read cycles do not
-take transport traps. Code that uses such addresses when using ephemeral
+this: VMA=PMA or` dtp-physical-address` write cycles do not update the
+`ephemeral-reference` bits, and VMA=PMA or `dtp-physical-address` read cycles do
+not take transport traps. Code that uses such addresses when using ephemeral
 references or references to oldspace must be very careful not to violate the
 conventions imposed by the garbage collector.
 
-Whether or not a given address is shadowed by the stack cache is
-determined by examining the virtual address only. Memory operations
-using dtp-physical-addresses will always bypass the stack cache.
+Whether or not a given address is shadowed by the stack cache is determined by
+examining the virtual address only. Memory operations using
+`dtp-physical-addresses` will always bypass the stack cache.
 
 To work properly in a shared-memory multiprocessor, updating a PHT entry should
 be implemented by reading the entry, ORing in the changed attributes, and
-writing the entry, using interlocked bus cycles. See the section".Revision 0
-Implementation Memory Feature".. A processor should not presume that its map
-cache entry is up to date, since other processors may have modified the PHT
-entry since it was encached. (When software modifies a mapping and adjusts the
-PHT, software must coordinate the change with all processors, which probably
-involves the invalidation of previous map-cache entries.)
+writing the entry, using interlocked bus cycles. See the section
+<<_revision_0_implementation_memory_features>>. A processor should not presume
+that its map cache entry is up to date, since other processors may have modified
+the PHT entry since it was encached. (When software modifies a mapping and
+adjusts the PHT, software must coordinate the change with all processors, which
+probably involves the invalidation of previous map-cache entries.)
+
 
 === Appendix: Comparison of 3600-family and I-machine. Memory Layout and Addressing
 
@@ -2320,14 +2477,15 @@ following ways:
 processes.
 
 - The upper portion of either memory space is used for physical address space,
-that is, for unmapped addressing. On the I machine, the upper one-thirty-second
-is used; on 3600-family machines, the upper one-sixteenth. - On 3600-family
-machines, physical address space size is 16 Mwords; on I machines, it is 4
-Gwords.
+that is, for unmapped addressing. On the I machine, the upper
+asciimath:[ 1 // 32^(nd)] is used; on 3600-family machines, the upper asciimath:[ 1 // 16^(th)].
+
+- On 3600-family machines, physical address space size is 16 Mwords; on I
+machines, it is 4 Gwords.
 
 - Both architectures employ the same page size: 256 words.
 
-- Both architectures call for a fixed portion of memory that is".wire"., that
+- Both architectures call for a fixed portion of memory that is "wired", that
 is, not subject to being swapped from main memory out to secondary memory. The
 architectures have differing requirements for portions of memory that are not
 subject to address-translation faults.
@@ -2353,23 +2511,23 @@ is a zone (128 Mwords), of which there are 32.
 
 - Wired address spaces are different in the two families. On 3600-family
 machines, wired memory occupies virtual address space from virtual address 0 to
-%wired-virtual-address-high (contained in a control register), which is mapped
+`%wired-virtual-address-high` (contained in a control register), which is mapped
 to a contiguous set of physical memory addresses starting at
-%wired-physical-address-low (in another control register). On I machines, wired
-pages are stored at a predetermined set of physical addresses, starting at
+`%wired-physical-address-low` (in another control register). On I machines,
+wired pages are stored at a predetermined set of physical addresses, starting at
 address 0.
 
 - Ephemeral spaces are different in the two families. On the I machine,
-ephemeral space is architecturally defined to be a particular address
-space - zone 0 (addresses 0 to 2°27). On 3600-family machines, the gc
-tag ram allows the ephemerality of each quantum to be specified.
+ephemeral space is architecturally defined to be a particular address space -
+zone 0 (addresses 0 to 2°27). On 3600-family machines, the gc tag ram allows the
+ephemerality of each quantum to be specified.
 
 - GC support in general is different in the two families. On a 3600-family
 machine, ephemeral-reference attributes. of a page are stored in a dedicated
 hardware memory. On the I-machine, these attributes are stored in the PHT.
 
-- The I machine never has to abort (pclsr) an instruction due to a translation
-for a resident page, while the L machine sometimes. has to do so.
+- The I machine never has to abort (`pclsr`) an instruction due to a translation
+for a resident page, while the L machine sometimes has to do so.
 
 - On a 3600-family, the hardware map cache is backed up by a PHTC (page hash
 table cache), which is referenced by microcode with some hardware assist. If
@@ -2377,12 +2535,12 @@ both the map and the PHTC miss for a given address translation, Lisp is called
 to attempt the translation via the PHT. The I machine has no PHTC, the hardware
 map cache is backed up directly by the PHT, which is referenced by microcode.
 
-- The 3600-family PHT is optimized for density (about 66%): each entry
-is one word, and table size is a prime number. The I-machine PHT (about 50%
-dense) is optimized for simplicity and performance: each entry is two
-words, and table size is a power of two. As a result of these differing
-designs, some attributes of resident pages are in the PHT on the
-I-machine, but in the MMPT on the 3600-family.
+- The 3600-family PHT is optimized for density (about 66%): each entry is one
+word, and table size is a prime number. The I-machine PHT (about 50% dense) is
+optimized for simplicity and performance: each entry is two words, and table
+size is a power of two. As a result of these differing designs, some attributes
+of resident pages are in the PHT on the I-machine, but in the MMPT on the
+3600-family.
 
 - The stack on the L machine is mapped to virtual memory on a per-page basis. In
 the I machine, the stack cache size (128 words in the first implementation) is
@@ -2390,115 +2548,204 @@ less than the sizeof a page (256 words), so there are registers that indicate
 the upper and lower bounds of the stack cache. (Actually, any cache size less
 than twice the page size requires such registers.)
 
+
 == Macroinstruction Set
 
 === Introduction
 
-This. chapter defines all the instructions executed by the I machine.
-The instructions are grouped according to their function. The index in
-the end matter of this manual lists the instructions alphabetically, and
-an appendix lists them by opcode and by instruction format. Another
-appendix contains a list of 3600 instructions not implemented by the
-I-machine and, in some cases, descriptions of how. to obtain their
-results with I-machine instructions.
+This chapter defines all the instructions executed by the I machine. The
+instructions are grouped according to their function. The index in the end
+matter of this manual lists the instructions alphabetically, and an appendix
+lists them by opcode and by instruction format. Another appendix contains a list
+of 3600 instructions not implemented by the I-machine and, in some cases,
+descriptions of how. to obtain their results with I-machine instructions.
 
-Before presenting the individual instructions, the chapter includes
-introductory sections applicable to all instructions: instruction
-sequencing, internal registers, and explanations of the various fields
-in the instruction definitions, including instruction formats and
-control stack addressing modes, argument descriptions, types of
-instruction exceptions, types of memory references, top-of-stack
-register effects,-and the edr codes of values returned.
+Before presenting the individual instructions, the chapter includes introductory
+sections applicable to all instructions: instruction sequencing, internal
+registers, and explanations of the various fields in the instruction
+definitions, including instruction formats and control stack addressing modes,
+argument descriptions, types of instruction exceptions, types of memory
+references, top-of-stack register effects,and the cdr codes of values returned.
 
 ==== Instruction Sequencing
 
-Instructions are normally executed in the order in which they.are stored
-in memory. Since full-word instructions cannot cross word boundaries, it
-would occasionally be necessary to insert a no-op instruction in places
-where:a full-word instruction or constant followed a half-word
-instruction that did not fall on an odd halfword address: This costs
-address space, I Cache space, and possibly execution time to execute the
-no-op.
+Instructions are normally executed in the order in which they are stored in
+memory. Since full-word instructions cannot cross word boundaries, it would
+occasionally be necessary to insert a no-op instruction in places where a
+full-word instruction or constant followed a half-word instruction that did not
+fall on an odd halfword address. This costs address space, I Cache space, and
+possibly execution time to execute the no-op.
 
-The cdr code field of each word executed contains sequencing information
-to minimize this waste. The cdr code takes on one of four values, which
-specify how much the PC is incremented after executing an instruction
-from this word. Note that the PC contains a half-word address.
+******
+NOTE: A full word address is split between an __even__ half-world address,
+followed by an __odd__ half-word address.
+******
 
-Cdr Code PC Increment’ Comment 6 +1 : Normal instruction sequencing 4
-illegal Fence; marks end of compiled: function 2 <4 On some constants 3
-+2 PC even Before some constants, on some constants +3 PC odd :
+The cdr code field of each word executed contains sequencing information to
+minimize this waste. The cdr code takes on one of four values, which specify how
+much the PC is incremented after executing an instruction from this word. Note
+that the PC contains a half-word address.
 
-When.a constant follows an odd half-word instruction, the half-word
-instruction pair has cdr code 0 and the constant has cdr code 3. _When a
-constant follows an even half-word instruction, the constant follows the
-odd half-word paired with the constant’s predecessor. .The half-word
-instruction pair has cdr code 3 and the constant has edr code 2.
+[cols="m,m,a", options="header"]
+|===
+| Cdr Code | PC Increment | Comment
+| 0 |  +1 | Normal instruction sequencing
+| 1 | illegal | Fence; marks end of compiled function
+| 2 | -1 | On some constants
+| 3 | +2 PC even | Before some constants, on some constants
+|   | +3 PC odd  |
+|===
 
-For example, straightline execution of the following sequence of
-instructions:
 
-Word Address Cdr Code Instruction(s) Comment 186 8 BOA Packed
-instructions 181 3 c Constant 182 3 F OD Packed instructions 183 2 E
-Constant 104 a H .G Packed instructions
+When a constant follows an odd half-word instruction, the half-word instruction
+pair has cdr code 0 and the constant has cdr code 3. When a constant follows an
+even half-word instruction, the constant follows the odd half-word paired with
+the constant’s predecessor. The half-word instruction pair has cdr code 3 and
+the constant has cdr code 2.
+
+For example, straightline execution of the following sequence of instructions:
+
+[cols="m,m,^m,a", options="header"]
+|===
+| Word Address | Cdr Code | Instruction(s) | Comment
+| 100          | 0        | B A            | Packed instructions
+| 101          | 3        | C              | Constant
+| 102          | 3        | F D            | Packed instructions
+| 103          | 2        | E              | Constant
+| 104          | 0        | H G            | Packed instructions
+|===
 
 proceeds as follows:
 
-Current PC — Instruction Executed - Cdr Code PC Increment 168 even A 8
-+1 168 odd B @ +1 181 even c 3 +2 162 even D 3 +2 183 even E 2 -1 1@2
-odd F 3 +3 484 even 6 6 #1 104 odd H 8 +1
+[cols="m,m,^m,m", options="header"]
+|===
+| Current PC | Instruction Executed  | Cdr Code | PC Increment
+| 100 even   | A | 0 | +1
+| 100 odd    | B | 0 | +1
+| 101 even   | C | 3 | +2
+| 102 even   | D | 3 | +2
+| 103 even   | E | 2 | -1
+| 102 odd    | F | 3 | +3
+| 104 even   | G | 0 | +1
+| 104 odd    | H | 0 | +1
+|===
 
-A cdr-code value of 1 (edr-nil) is used to mark the end of compiled
-functions.
+A cdr-code value of 1 (`cdr-nil`) is used to mark the end of compiled functions.
 
-This value is placed in the word after the final instruction of the
-function. See the section".Representation of Compiled Functions". It
-is an error if the processor — attempts to execute this word. The
-chapter on traps and handlers contains more information, See the section
-``Exception Handling".
+This value is placed in the word after the final instruction of the function.
+See the section <<_representation_of_compiled_functions>>. It is an error if the
+processor attempts to execute this word. The chapter on traps and handlers
+contains more information, See the section <<_exception_handling>>.
 
 The cdr code sequencing described above only indicates the default next
-instruction. When an instruction specifically alters the flow of control
-(for example, branch) the cdr code has no effect.
+instruction. When an instruction specifically alters the flow of control (for
+example, branch) the cdr code has no effect.
 
 ==== Internal Registers
 
-Table 11 lists I-machine internal registers. Within this table, an
-asterisk by an address entry means that the register may be defined by
-an implementation, and reserved means the register may be
-architecturally defined in the future. The
+Table 11 lists I-machine internal registers. Within this table, an asterisk by
+an address entry means that the register may be defined by an implementation,
+and reserved means the register may be architecturally defined in the future.
+The information in this table is specific to Revision 0 of the Ivory chip. As
+the architecturally defined information in the table becomes determinate,
+implementation-specific details will be removed to an appendix.
 
-_ information in this table is specific to Revision 0 of the Ivory chip.
-As the. architecturally defined information in the table becomes
-determinate,
+Table 11 I-Machine Internal Registers
+[cols="m,m,m,m", options="header"]
+|===
+| Address | Read/Write | Data Type | Register Name
+| 0* | RW | loc | For use by microcode only
+| 1 | RW | loc | Frame Pointer (FP)
+| 2 | RW | loc | Local Pointer (LP)
+| 3 |  |  | Stack Pointer (SP)
+| 4* |  |  | For use by. microcode only
+| 5 | RW | loc | Stack Cache Lower Bound
+| 6 | RW | loc/pa | BAR0 Contents
+| 206 | RW | loc/pa | BAR1 Contents
+| 406 | RW | loc/pa | BAR2 Contents
+| 606 | RW | loc/pa | BAR3. Contents
+| 7 | R  | fix | BAR0 Hashed
+| 207 | R  | fix | BAR1 Hashed
+| 407 | R  | fix | BAR2 Hashed
+| 607 | R  | fix | BAR3 Hashed
+| 10* |  |  | For use. by microcode only
+| 11* |  |  | For use by microcode only
+| 12 | RW | pc | Continuation
+| 13 | RW | fix | DP Op
+| 14 | RW | fix | Control. Register
+| 15* |  |  | For use by nicrecode only
+| 16 | RW | fix | Ephemeral Oldspace Register
+| 17 | RW | fix | Zone Oldspace Register
+| 20 | R | fix | Implementation Revision
+| 21* | RW | fix | FP coprocessor present
+| 22* |  |  | For use by microcode only
+| 23 | RW | fix | Preempt Register
+| 24* | RW | fix | Icache Control
+| 25* | RW | fix | Prefetcher Control
+| 26* | RW | fix | Map Cache Control
+| 27* | RW | fix | Memory Control
+| 30* | R  | fix | ECC Log
+| 31* | R  | fix | ECC Log Address
+| 32* | W | - | Invalidate Matching Map Entry for VMA in BAR0
+| 232* | W | - | Invalidate Matching Map Entry for VMA in BAR1
+| 432* | W | - | Invalidate Matching Map Entry for VMA in BAR2
+| 632* | W | - | Invalidate Matching Map Entry for VMA in BAR3
+| 33* |  |  | For use by microcode only
+| 34 | RW |  | Stack cache overflow limit 
+| 35* |  |  | For use by microcode only
+| 36* |  |  | For use by microcode only
+| 37 | Reserved |  | 
+| 40-47* |  |  | For use by microcode only
+| 50* |  |  | For use by microcode only
+| 51* |  |  | For use by microcode only
+| 52* | W |  | Load Matching Map Word 1 for VMA in BAR0
+| 252* | W |  | Load Matching Map Word 1 for VMA in BAR1
+| 452* | W |  | Load Matching Map Word 1 for VMA in BAR2
+| 652* | W |  | Load Matching Map Word 1 for VMA in BAR3
+| 53-777 | Reserved |  | 
+| 1000 | RW | --  | Top of Stack (TOS)
+| 1001 | RW | --  | Array Event Count
+| 1002 | RW | --  |  Binding Stack Pointer
+| 1003 | RW | --  | Catch Block Pointer 
+| 1004 | RW | --  | Control Stack Limit 
+| 1005 | RW | --  |  Control Stack Extra Limit 
+| 1006 | RW | --  | Binding Stack Limit
+| 1007 | RW | --  | PHT Base
+| 1010 | RW | --  | PHT Mask
+| 1011 | RW | --  | Count Map Reloads
+| 1012 | RW | --  | List Cache Area
+| 1013 | RW | --  | List Cache Address
+| 1014 | RW | --  | List Cache Length 
+| 1015 | RW | --  | Structure Cache Area 
+| 1016 | RW | --  | Structure Cache Address 
+| 1017 | RW | --  | Structure Cache Length 
+| 1030 | RW | --  | Maximum Frame Size 
+| 1031 | RW | --  | Stack Cache Dump Quantum
+| * = Implementation Specific
+|===
 
-* implementation-specific details will be removed to an appendix,
 
-The %read-internal-register instruction always returns the object from
-the specified register with its cdr code set to edr-next. If an internal
-register has edr- code bits, they can not be read by this instruction. |
+The `%read-internal-register` instruction always returns the object from the
+specified register with its cdr code set to edr-next. If an internal register
+has cdr-code bits, they can not be read by this instruction.
 
--The rotate-latch register does not have an internal address and can not
-be read or | written with “oread-Internal-register or
-Jowrite-internal-register.
+The `rotate-latch` register does not have an internal address and can not be read
+or written with `%read-internal-register` or `%write-internal-register`.
+
 
 ==== Memory Side Effects
 
-Reading memory may not cause side effects. ‘The architecture permits an
-implementation to start a memory read. that it will not use, perhaps
-because of instruction prefetching, perhaps while starting an array
-reference before an out of _ bounds check is performed, perhaps because
-of instruction pipelining (an instruction preceding a memory read takes
-a trap after the memory read instruction has started its read), or
-perhaps for something else. Writing memory using a dtp-physical-address
-is allowed to cause side effects; . |
-
-dtp-physical-address is guaranteed not to be cached, and the write is
-guaranteed ; |
-
-to happen exactly once. Also, both the %ecoprocessor-read and
-%coprocessor-write instructions may cause side effects; they are
-guaranteed to be performed exactly once. -
+Reading memory may not cause side effects. The architecture permits an
+implementation to start a memory read. that it will not use, perhaps because of
+instruction prefetching, perhaps while starting an array reference before an out
+of bounds check is performed, perhaps because of instruction pipelining (an
+instruction preceding a memory read takes a trap after the memory read
+instruction has started its read), or perhaps for something else. Writing memory
+using a `dtp-physical-address` is allowed to cause side effects;
+`dtp-physical-address` is guaranteed not to be cached, and the write is
+guaranteed to happen exactly once. Also, both the `%coprocessor-read` and
+`%coprocessor-write` instructions may cause side effects; they are guaranteed to
+be performed exactly once.
 
 ==== Explanation of Instruction Definitions
 
@@ -2506,233 +2753,21 @@ guaranteed to be performed exactly once. -
 
 In the chapter on data representation, words in Lisp-machine memory were
 interpreted either as Lisp object references or as parts of the stored
-representation - of these objects. This chapter reinterprets all memory
-words as instructions. The processor treats a memory word as an
-instruction whenever it is encountered in | the body of a compiled
-function – or, more specifically, when the program counter points to.
-the memory word and the word is fetched as an instruction.
-
-* With the exception of the data types specifically designated as
-instructions, there is no one-to-one correspondence between data types
-and instruction formats. | Instead, the data types are subdivided into
-classes, and each class forms the basis
-
-instruction. When an instruction specifically alters the flow of control
-(for example, branch) the cdr code has no effect.
-
-==== Internal Registers
-
-Table 11 lists I-machine internal registers.. Within this table, an
-asterisk by an address entry means. that the register may be defined by
-an-implementation, and reserved means the register may be
-architecturally defined in the future. The information in this table is
-specific to Revision 0 of the Ivory chip. As the architecturally defined
-information in the table becomes determinate, implementation-specific
-details will be removed to an appendix.
-
-The %read-internal-register instruction always returns the object from
-the specified register with its cdr code set to edr-next. If an internal
-register has cdr- code bits, they can not be read. by this. instruction.
-
-The rotate-latch register. does not have an internal. address and can
-not be read or written with %read-internal-register or
-%write-internal-register.
-
-—. > a
-
-==== Explanation of Instruction Definitions
-
-===== Instruction Formats
-
-In the chapter on data representation, words in Lisp-machine memory were
-interpreted either as Lisp object references or as parts of the stored
-representation of these objects. This chapter reinterprets all memory
-words as instructions. The processor treats a memory word as an
-instruction whenever it is encountered in the body of a compiled
-function – or, more specifically, when the program counter points to the
-memory word and the word is fetched as an instruction.
-
-With the exception of the data types specifically designated as
-instructions, there is no one-to-one correspondence between data types
-and instruction formats. Instead, the data types are subdivided into
-classes, and each class forms the basis of.an instruction type. The
-packed half-word instruction data type uses two instruction formats. See
-the section".Half-Word Instruction Data Types".
-
-Table 12 summarizes I-machine instruction formats and lists the data
-types in each class.
-
-The following paragraphs describe these formats and their
-interpretations. Full-Word Instruction Formats
-
-Function-Calling Instruction Formats
-
-A word of data type dtp-call-xxx contains a single instruction. The
-instruction contains a data-type field, which is used as the opcode, and
-an address field. as
-
-shown in Figure 21. This kind of instruction starts a function call.
-
-Table 11.
-
-I-Machine Internal Registers
-
-Address Read
-
-Qx 1
-
-2 3 4x 5
-
-6 286 486 606
-
-1.  487 667 18x Tix 12 13 44 15% 16 17 26 21x 22x 23 24x 25x 26x atx 38x
-31x 32x 232x 432x 632x
-
-[Write
-
-RW Ru RW
-
-RW
-
-RW RW RW
-
-RW Ru
-
-RW
-
-Data Type
-
-Toc Joc Toc
-
-loc joc/pa Loc/pa Joc/pa joc/pa fix fix fix Fix
-
-pe Fix fix
-
-fix fix fix fix
-
-*Impiementation Specific
-
-Register Name
-
-For use by microcode only
-
-Frame Pointer (FP)
-
-Local Pointer (LP)
-
-Stack Pointer (SP)
-
-For use by. microcode only
-
-Stack Cache Lower Bound
-
-BAR@ Contents
-
-BAR4 Contents
-
-BAR2 Contents
-
-BAR3. Contents
-
-BAR@ Hashed
-
-BAR1 Hashed
-
-BAR2 Hashed
-
-BAR3 Hashed
-
-For use. by microcode only
-
-For use by microcode only
-
-Continuation
-
-OP Op
-
-Control. Register
-
-For use by nicrecode only
-
-Ephemeral Oldspace Register
-
-Zone Oldspace Register
-
-Implementation Revision
-
-FP coprocessor present
-
-For use by microcode only
-
-Preempt Register
-
-Icache Control
-
-Prefetcher Control
-
-Map Cache Control
-
-Memory Control
-
-ECC Log
-
-ECC Log Address
-
-Invalidate Matching Map Entry for VMA in BARG invalidate Matching Map
-Entry for VMA in BAR1 invalidate Matching Map Entry for VMA in BAR2
-Invalidate Matching Map Entry for V¥MA in BAR3
-
-Address Read . Data Type
-
-33x 34 35x 36x 37 48-47% . 5Ox 51x 52x 252« 452x 652x 53-777 1888 1081
-1862 1683 7004 1985 1886 1807 1818 1611 1612 1813 1814 1815 1616 1017
-1438 4931
-
-*Implementation Specific
-
-\{Write
-
-RW
-
-reserved
-
-W W W W
-
-reserved. RW RW RW RW RW RW RW RW RW RW RW RW RW RW RW RW RW RW
-
-fix
-
-Symbolics, Inc.
-
-Table 11,. continued Register Name
-
-For. use by: micracade anty Stack. cache overflow limit For use-by
-microcode only For use by microcode only
-
-For use by microcode only For use by micracade only For use. by
-microcode only Load Matching Map Word 1-for. VMA in BAR@ Load Matching
-Map Word 1 for VMA in BAR Load Matching Map Word 1 for WMA in BAR2 Load
-Matching Map Word 1 for VMA in BAR
-
-Top of Stack (TOS)
-
-Array Event Count Binding Stack Pointer - Catch Block Pointer Control
-Stack Limit Control Stack Extra Limit Binding Stack Limit
-
-PHT Base
-
-PHT Mask
-
-Count Map Reloads
-
-List Cache Area
-
-List Cache Address
-
-List Cache Length Structure Cache Area Structure Cache Address Structure
-Cache Length Maximum Frame Size Stack Cache Dump Quantum
-
-77 Symbolics, inc.
+representation - of these objects. This chapter reinterprets all memory words as
+instructions. The processor treats a memory word as an instruction whenever it
+is encountered in the body of a compiled function or, more specifically, when
+the program counter points to the memory word and the word is fetched as an
+instruction.
+
+With the exception of the data types specifically designated as instructions,
+there is no one-to-one correspondence between data types and instruction
+formats. Instead, the data types are subdivided into classes, and each class
+forms the basis of an instruction type. The packed half-word instruction data
+type uses two instruction formats. See the section
+<<_half_word_instruction_data_types>>.
+
+Table 12 summarizes I-machine instruction formats and lists the data types in
+each class.
 
 Table 12. .I-Machine Instruction Formats
 
@@ -2809,9 +2844,20 @@ OTP-NULL a DTP—MONI TOR-FORWARD 1 DTP-HEADER-P 2 DTP-HEADER-I 3
 DTP-ONE-Q-FORWARD 5 DTP-HEADER-FORWARD 6 DTP-ELEMENT~FORWARD 7
 DTP-GC~FORWARD 45
 
+
+The following paragraphs describe these formats and their interpretations.
+
+Full-Word Instruction Formats::
+
+Function-Calling Instruction Formats::
+
+A word of data type dtp-call-xxx contains a single instruction. The instruction
+contains a data-type field, which is used as the opcode, and an address field.
+as shown in Figure 21. This kind of instruction starts a function call.
+
 Figure 21. I-machine instruction formats.
 
-Entry-Instruction Format
+Entry-Instruction Format::
 
 An. entry instruction is a word of type dtp-packed-instruction, that
 actually contains one full-word instruction. Its format, shown in Figure
@@ -2827,7 +2873,7 @@ required+optional args, biased by +2 <17:18> entry. instruction opcode.
 The. hardware will dispatch. to one of two microcode starting addresses
 according to the value of the &rest-accepted bit.
 
-Constant Formats
+Constant Formats::
 
 The processor treats any word whose data type is that of an object
 reference asa constant. The processor pushes the object reference itself
@@ -2835,7 +2881,7 @@ onto the control. stack and sets its cdr. code to. cdr-next for any
 object. that is pushed onto the control stack, unless otherwise
 specified.
 
-Value Cell Contents
+Value Cell Contents::
 
 A. word of data type dtp-external-value-cell-pointer contains the
 address of a memory cell. Using a data-read operation, the processor
@@ -2843,14 +2889,16 @@ pushes the word contained in the addressed cell onto the control stack,
 following invisible pointers if necessary. Typically this pointer
 addresses a symbol’s value or function cell.
 
-Hiegal Instruction Formats
+Illegal Instruction Formats::
 
 A word of. any data type other than those listed above cannot be
 executed as an instruction. The processor will trap out if it encounters
 such a word. A later chapter contains further information on trapping.
 See the section".Exception Handling".
 
-Packed Half-Word instruction Formats This is the most common instruction
+Packed Half-Word instruction Formats::
+
+This is the most common instruction
 format. The word with data type dtp-packed-instruction contains two
 18-bit instructions, which are packed into the word as shown:
 
@@ -2865,7 +2913,7 @@ opcode, a number between 60 and 77 octal.)
 Each of the two instructions in this format can be further decomposed.
 See Figure 21. As the figure shows, there are two basic 18-bit formats.
 
-Format for 10-Bit Immediate Operand
+Format for 10-Bit Immediate Operand::
 
 The 10-bit-immediate-operand format is for those instructions that
 include an immediate operand in. their low-order ten bits. The immediate
@@ -2874,7 +2922,7 @@ unsigned, depending on the instruction. There are two special subcases
 of this instruction format: field extraction instructions and branch and
 loop instructions.
 
-Format for Field Extraction
+Format for Field Extraction::
 
 The field-extraction format is for instructions used to extract and
 deposit fields from words of different data types. The field is
@@ -2891,13 +2939,13 @@ instructions take two arguments. The first is the new value of the field
 to deposit into the second argument. It is illegal, though not checked,
 to specify a field with bits outside the bottom 32 bits. : .
 
-Format for Branch Instructions
+Format for Branch Instructions::
 
 Branch instructions are a subclass of 10-bit-immediate-format
 instructions. They use the immediate argument as a signed half-word
 offset.
 
-Format for Operand From Stack
+Format for Operand From Stack::
 
 Packed half-word. instructions that address the control stack. use the
 operand-from- stack format: They. have a 10-bit field that specifies an
@@ -2907,7 +2955,7 @@ instruction and the other operands are popped. off the top of the’stack.
 If the instruction produces a value, then the value is pushed ‘on. top
 of the stack.
 
-Control Stack Addressing Modes
+Control Stack Addressing Modes::
 
 Operand-from-stack instructions reference operands on the control stack
 relative to one of three pointers to various regions of the current
@@ -3269,15 +3317,15 @@ edr-code fields of the frame header on the stack.
 
 * A memory read or block read instruction – one of %memory-read,
 %memory-read-addresse, %block-n-read, or %block-n-read-shift – can copy
-the edr code of the word from memory into the word on the stack.
+the cdr code of the word from memory into the word on the stack.
 
-« The push-apply-args operation. can produce 1 (edr-nil) or 2
+« The push-apply-args operation. can produce 1 (`cdr-nil`) or 2
 (cdr-normal) in . the cdr-code field of words on the stack.
 
 ° The catch-open instruction can produce any value in the cdr-eode field
 of certain words in the catch block.
 
-¢ The catch-close instruction produces 2 or 8 in the edr code of the PC
+¢ The catch-close instruction produces 2 or 8 in the cdr code of the PC
 it saves before jumping to an unwind-protect cleanup handler.
 
 * %p-tag-dpb can be used to store into the stack.
@@ -3301,8 +3349,7 @@ Return-kludge".
 
 === The Instructions
 
-The I-machine implements 210. instructions in 14 categories.. There.
-are:
+The I-machine implements 210 instructions in 14 categories. There are:
 
   10 list-function
   24 predicate
@@ -3315,14 +3362,15 @@ are:
   12 function-calling
   4 binding
   2 catch
-  24 lexical-variable-accessing 11 instance-variable-accessing, and
+  24 lexical-variable-accessing
+  11 instance-variable-accessing, and
   27 subprimitive ,
 
 instructions.
 
 ==== List-Function Operations
 
-ear, cdr, set-to-car, set-to-cdr, set-to-cdr-push-car, rplaca, rplacd,
+car, cdr, set-to-car, set-to-cdr, set-to-cdr-push-car, rplaca, rplacd,
 rgetf, member, assoc
 
 The Lisp predicate instructions eq, eql, and endp are documented
@@ -6209,7 +6257,7 @@ Immediate Argument Type Unsigned
 Description
 
 Returns, in accordance with the value disposition specified by the
-contents of the Control register, the number of values specified by arg
+contents of the `Control` register, the number of values specified by arg
 in a multiple group, which includes as the top entry the number of
 values returned, on top of the stack. Removes the returning function’s
 frames from the control and binding stacks, unthreads catch blocks,
@@ -6307,7 +6355,7 @@ eet
 Instruction
 
 Control register binding-cleanup bit into > bit 38 of argi on the
-binding stock and sets this Control register bit to 1. Does.not follow
+binding stock and sets this `Control` register bit to 1. Does.not follow
 external-value-ccil _ pointers as invisible pointers when reading and
 writing the cell. Takes an
 
@@ -6332,8 +6380,8 @@ arg dtp-locative Immediate Argument Type Signed
 Description
 
 Pushes arg onto the binding stack, along with the contents of the cell
-it points to. Copies. the Control register binding-cleanup bit inte bit
-38 of arg on the binding stack and. sets this Control register bit to 1.
+it points to. Copies. the `Control` register binding-cleanup bit inte bit
+38 of arg on the binding stack and. sets this `Control` register bit to 1.
 Does not follow external-value-cell pointers as invisible pointers when
 reading the cell. Takes an error trap if the binding-stack pointer would
 be greater than the contents of the Binding-Stack-Limit register. See
@@ -6358,7 +6406,7 @@ Description Unbinds: the top arg variables on the binding stack. It
 unbinds a variable by popping the variable’s old value and the locative
 to that variable off the binding stack and storing the old value back
 into the location pointed to by the locative) Copies bit 38 of each
-locative word on the binding stack into sh 27 the Control register
+locative word on the binding stack into sh 27 the `Control` register
 binding-cleanup bit as it pops the locative. After all we the unbindings
 have been accomplished, does a check-preempt-request  operation. See the
 section".Binding Stack". page 244, See the section".Revision 0
@@ -6383,7 +6431,7 @@ unbound. It unbinds a.variable by popping the variable’s old value and
 the locative to _ . that variable off the binding stack and storing the
 old value back into the vais vt location pointed to by the. locative,
 Copies bit 38 of each locative word on. .}.. —— the binding stack into
-the Control register binding-cleanup bit as it pops an the locative.
+the `Control` register binding-cleanup bit as it pops an the locative.
 After all the unbindings have heen accomplished, does a Or,
 _check-preempt-request operation. It is legal for arg to equal the
 binding- stack pointer at the beginning of the instruction; in this
@@ -6443,7 +6491,7 @@ catch operation, it contains the address to which throw function should
 transfer control. For an unwind-protect operation, it contains the
 address of the first instruction of
 
-the cleanup handler. The edr code of this word is set to zero
+the cleanup handler. The cdr code of this word is set to zero
 (cdr-next).and not used. For a catch operation with a value disposition
 of Return, the catch-block-pc word contains nil.
 
@@ -6460,7 +6508,7 @@ catch-block-pc word of the previous catch block, or else contains nil.
 The cdr-code. field of this word saves two bits of the Control. register
 that need to be restored.
 
-‘The catch-block-continuation word saves the Continuation hardware
+‘The catch-block-continuation word saves the `Continuation` hardware
 ‘register so that a throw function can restore it. The cdr-code field of
 this word saves the value disposition of a catch; this tells the throw
 function where to put. the values © thrown, This word is not used by the
@@ -6532,7 +6580,7 @@ operates as. follows:
 * 2, Push the catch-block-pointer, with control-register.extra-arg and
 control-register.cleanup-catch bits in the cdr. code.
 
-3..Push the Continuation register, with bits 6 and.7 of the catch-open
+3..Push the `Continuation` register, with bits 6 and.7 of the catch-open
 instruction in the cdr code.
 
 1.  Set catch-block-pointer to the value stack-pointer had at the
@@ -6779,10 +6827,10 @@ money
 
 These instructions use the following forwarding procedures:
 
-If the edr code of self (FP|3) is 1, accesses the location in the instance that is
+If the cdr code of self (FP|3) is 1, accesses the location in the instance that is
 selected by the mapping table. | a
 
-If the edr code of self (FP{3) is 0, does : a ‘structure-offset memory reference to the |
+If the cdr code of self (FP{3) is 0, does : a ‘structure-offset memory reference to the |
 
 _ header of the instance to check forwarding. If there is no forwarding pointer, sets
 
@@ -7459,7 +7507,7 @@ fixnum-only <5> (1 bit) If set, the instruction will trap if the memory data
 type is not dtp-fixnum.
 
 set-cdr-next <4> (1 bit) If set, the cdr code of the result is 0; otherwise, the
-edr code of the result is the cdr code of memory.
+cdr code of the result is the cdr code of memory.
 
 Exception None
 Memory Reference Controlled by. the immediate field.
@@ -7587,7 +7635,7 @@ Immediate Argument Type Signed
 
 Description
 
-Stores arg2 into the. memory location addressed by argl, storing all 40 bits including the edr code, and not following
+Stores arg2 into the. memory location addressed by argl, storing all 40 bits including the cdr code, and not following
 invisible pointers. This replaces the 3600’s %p-store-cdr-and-contents and %p-store-tag-and-pointer instructions. The
 second argument is typically constructed with the %set-tag instruction; in the I-Machine it is legal to have invisible
 pointers and special markers in the stack temporarily for this purpose.
@@ -7723,7 +7771,7 @@ Description
 Causes the processor to start executing macroinstructions at the specified
 PC. This instruction checks that the data type of arg is.dtp-even-pe or dtp-odd-pe and jumps to the address. In
 addition, if bit 39 of arg is 1, this instruction stores bit 38 of that word into control-register.cleanup-in- progress.
-If bit 39 is 0, it leaves the Control register alone. An unwind- protect cleanup handler terminates with a %jump
+If bit 39 is 0, it leaves the `Control` register alone. An unwind- protect cleanup handler terminates with a %jump
 instruction.
 
 Exception None
@@ -8193,38 +8241,46 @@ unify-lists, uni Fyelistee1
 === Stacks
 
 The architecture defines three stacks:
-* control stack,
-* binding stack, and
-« data stack.
 
-Each type of stack is described in the sections that follow. All the stacks grow in the direction of increasing memory
-addresses. A stack pointer addresses the top word on a ‘stack. A stack limit is the address of the highest location that
+- control stack,
+- binding stack, and
+- data stack.
+
+Each type of stack is described in the sections that follow. All the stacks grow
+in the direction of increasing memory addresses. A stack pointer addresses the
+top word on a ‘stack. A stack limit is the address of the highest location that
 can be used, A stack base register addresses the lowest entry in the stack.
 
 ==== Control Stack
 
-The control stack holds control information necessary on a per function invocation basis. It also holds the arguments
-and local and temporary variables of a function.
+The control stack holds control information necessary on a per function
+invocation basis. It also holds the arguments and local and temporary variables
+of a function.
 
 ===== Control Stack Frames
 
-The environment of an executing function is stored in a frame on the control stack. A control.stack frame consists of a
-two-word header, the arguments, and then the local variables and temporaries. Note that there are no separate copies of
-the arguments for caller and callee; in this respect the I Machine architecture is like the LM-2 and unlike the 3600.
+The environment of an executing function is stored in a frame on the control
+stack. A control stack frame consists of a two-word header, the arguments, and
+then the local variables and temporaries. Note that there are no separate copies
+of the arguments for caller and callee; in this respect the I Machine
+architecture is like the LM-2 and unlike the 3600.
 
 See Figure 22.
 
-The first word in a control stack frame header contains a saved copy of the caller’s-Continuation register. This is
-either the caller’s caller’s PC or the address of a function the caller is going to call later. The second word in a
-frame header contains a saved copy of the caller’s Control register.
+The first word in a control stack frame header contains a saved copy of the
+caller’s `Continuation` register. This is either the caller’s caller’s PC or the
+address of a function the caller is going to call later. The second word in a
+frame header contains a saved copy of the caller’s `Control` register.
 
-When a function returns, the saved values are restored into the Continuation and Control registers, At the same time,
-the caller’s PC is restored from the previous contents of the Continuation register.. When a function is first. entered,
-the contents of the Continuation register. normally points at the next instruction after a finish-call instruction,
-except in a trap handler, where it points either at the instruction that trapped or at the following instruction,
+When a function returns, the saved values are restored into the `Continuation` and
+Control registers, At the same time, the caller’s PC is restored from the
+previous contents of the `Continuation` register.. When a function is first.
+entered, the contents of the `Continuation` register. normally points at the next
+instruction after a finish-call instruction, except in a trap handler, where it
+points either at the instruction that trapped or at the following instruction,
 depending on the type of trap.
 
-Note that the Continuation and Control registers stored in a frame header belong to the caller’s frame, not.to the frame
+Note that the `Continuation` and `Control` registers stored in a frame header belong to the caller’s frame, not.to the frame
 where they are stored. The values for the current frame are kept in live (hardware) registers instead of the stack
 because special hardware uses them.
 
@@ -8356,7 +8412,7 @@ Stack Limit register.
 
 Bindings are performed by the bind-locative or bind-locative-to-value instruction. A bind instruction checks the Control
 register binding cleanup bit. If this bit is 0, then this binding is the first associated with the current frame. The
-instruction will set the binding cleanup bit in the Control register, and set the chain bit for the entry on the binding
+instruction will set the binding cleanup bit in the `Control` register, and set the chain bit for the entry on the binding
 stack to 0. If the cleanup bit is 1, then there are already bindings associated with the current frame. The instruction
 will set the chain bit for the entry to 1. 
 
@@ -8419,14 +8475,14 @@ arguments the function accepts is variable. LP may be adjusted by the entry and 
 The stack pointer points to the highest word in the contro! stack. SP is incremented or decremented as execution
 proceeds and pushes or pops the stack.
 
-The Continuation register contains the address of the instruction to be executed
+The `Continuation` register contains the address of the instruction to be executed
 after the next finish-call or return instruction. Whether this is the return address
 in the caller, or the first instruction in a function about to be called, depends on
 context. It is the address of the function to call between the start-call and finish-
 call instructions, and the return address in the caller between the finish-call and
 return, instructions.
 
-‘The Control register contains a fixmum with several packed fields:
+‘The `Control` register contains a fixmum with several packed fields:
 
 Position Size Name
 
@@ -8500,7 +8556,7 @@ instructions (unbind-n and %restore-binding-stack). See the section".Binding Ins
 Trap-on-exit This bit causes a trap to software when the frame is exited. Used for bottom frame in stack, debugger c-X E
 command, phantom stacks, metering, and so forth. The software can use the cdr-code bits of the two header words in the
 frarne, which are initially set to 11 by the hardware, to distinguish these cases. The trap-on-exit bit is set and
-cleared only by software, and only in eopies of the Control register saved in memory, not in the live register.
+cleared only by software, and only in eopies of the `Control` register saved in memory, not in the live register.
 
 For details: See the section".Frame Cleanup".
 
@@ -8612,9 +8668,9 @@ the hardware turns out to be. The prefetching versions of the indirect and.
 generic calis are almost certainly not treated any differently from the normal
 versions by the hardware: they exist entirely for software reasons.
 
-The start-call instructions push the Continuation and Control registers (in that
+The start-call instructions push the `Continuation` and `Control` registers (in that
 order) onto the control stack with their cdr codes both set to 3; they will become
-the header of the callee’s control stack frame. After the Control register is
+the header of the callee’s control stack frame. After the `Control` register is
 pushed, the control-register.call-started bit is set to 1.
 
 Depending | on the data type of the function being called, a start-call instruction
@@ -8626,9 +8682,9 @@ cannot be computed until the first argument is known.! If the-start-call
 instructions push an extra argument, they set the extra-argument bit in the
 Control register to 1; otherwise they clear the bit to 0. This information is saved
 for the finish-call instruction. The setting or clearing of this bit takes place after
-the Control register is saved on the stack.
+the `Control` register is saved on the stack.
 
-After Continuation and Control registers are saved, the Continuation register is
+After `Continuation` and `Control` registers are saved, the `Continuation` register is
 
  
 
@@ -8704,9 +8760,9 @@ LOC (OPC)
 
 WCE
 
-[~ Slack Pointer |—> Callers Control register | ;
+[~ Slack Pointer |—> Callers `Control` register | ;
 
-Control Register” : Callers: Continuation register ——.
+Control Register” : Callers: `Continuation` register ——.
 
 | CS EA | - Naw Frame header
 -. Gontinvation Register ro _—_ Callers trame
@@ -8747,7 +8803,7 @@ Figure 23. The stack at the end of a start-call instruction
 
 After starting. a- function call, the caller computes the arguments and pushes them onto the stack, in order. Results of
 instructions normally are ¢cdr-next,. to facilitate the: linking of the arguments into a list-to bé passed t".an &rest
-argument. The resetting of the final edr code is performed: by the entry instruction.
+argument. The resetting of the final cdr code is performed: by the entry instruction.
 
 ==== Finishing the Call
 
@@ -8823,7 +8879,7 @@ finish-call.
 
 SP, Binding-stack-pointer, and Oata-stack-pointer are unchanged.
 
-Save the old contents of Continuation temporarily (see below).
+Save the old contents of `Continuation` temporarily (see below).
 
 The control register is adjusted as follows:
 
@@ -8857,7 +8913,7 @@ stack mode, the machine halts with a fatal error. See the section".Processor Fau
 The finish-call instruction ORs control-register.call-trace into control-register.trace- pending, forcing a trace
 pre-trap upon execution of the next instruction if call- trace was 1.
 
-Finally execution proceeds with the instruction at the halfword address specified in the Continuation register before it
+Finally execution proceeds with the instruction at the halfword address specified in the `Continuation` register before it
 was set to the return address.
 
 Figure 24 shows how the stack looks after completion of the finish-call instruction.
@@ -8905,7 +8961,7 @@ Gase A: instruction was finish-call
 | Stack Pointer | —_> ear | Last supplied argument = Top of stack
 ‘ogram Counter
 
-fo contents of Continuation Reg. | . | - | erguments
+fo contents of `Continuation` Reg. | . | - | erguments
 Continuation Register . : supplied = 1
 L a PC of instruction to return to* | nari _ Supplied argument - Nae Tier ee ;
 i Rae ister  rext First supplied argument
@@ -8918,7 +8974,7 @@ i Rae ister  rext First supplied argument
 
  
 
-Frame pointer | —> [eg] caters Continuation register -
+Frame pointer | —> [eg] caters `Continuation` register -
 
 _ Frame header
 
@@ -8971,7 +9027,7 @@ ram Counter
 
 Po
 
-Old contents of Continuation Reg.
+Old contents of `Continuation` Reg.
 Fe I ia
 PC of instruction to:raturn.to
 
@@ -9002,7 +9058,7 @@ Figure 24. The stack after completion of the finish-call instruction
 
 ===== Trapping Out of Finish-call and Restarting
 
-Traps in the finish-call instructions always occur after building the new frame. and setting the Control register, the
+Traps in the finish-call instructions always occur after building the new frame. and setting the `Control` register, the
 Continuation register, and-the Program Counter to their new values: Thus any trap occurring in a finish-call instruction
 looks like a pre-trap in the first instruction of the called function. No special action is required to restart after
 such a: trap.
@@ -9011,7 +9067,7 @@ such a: trap.
 
 It is sometimes necessary to abort a call that has been started, instead of finishing it with a finish-call instruction.
 Aborting a call consists of popping the stack back to the level before the call was started and restoring some of the
-Continuation and Control register values saved by the start-call instruction. This is performed by Lisp code.
+Continuation and `Control` register values saved by the start-call instruction. This is performed by Lisp code.
 
 === Function Entry
 
@@ -9182,7 +9238,7 @@ and retry the argument matchup process.
 
 If exactly the maximum number of spread arguments was supplied
 (N-Args = max-args) then use the apply argument as the rest argument.
-Set the cdr-code of the top word of stack to edr-nil and enter the
+Set the cdr-code of the top word of stack to `cdr-nil` and enter the
 function at entry-vector element (mex-args - min-ergs + L). This skips
 over the default initialization for the optional arguments and for the
 rest argument. 
@@ -9382,11 +9438,11 @@ arguments FP 4+ maxargs +2 —>> ie4r
 supplied = 6 . cdr:
 1
 Control Register argo J ; cdr. j
-[Aropize Apply | - Control Register oo, r- .
-=§ =0 Caller’s Control register : ; Arg-Size Apply arg
-oe ; Ty nen 4 =8 =0 | .. Caller’s Control register .
-i Frame pointer | —> Caller's Continuation register —
-- f Frame pointer —> Caller's Continuation register
+[Aropize Apply | - `Control` Register oo, r- .
+=§ =0 Caller’s `Control` register : ; Arg-Size Apply arg
+oe ; Ty nen 4 =8 =0 | .. Caller’s `Control` register .
+i Frame pointer | —> Caller's `Continuation` register —
+- f Frame pointer —> Caller's `Continuation` register
 
   
 
@@ -9417,9 +9473,9 @@ art — - FP + max-args + 2° —>>.
 next arg2 - - ‘ ae
 cdr agt oo Fe oO Br . 4, ang
 Control Register _ ; _ car, argo co - . | . - 7 . Se, 1:
-Arg-syze Apaly m {G4 Caller's Control register a | farggze Apaly ] argo as
-Frame pointer _| 7 [ES] Caters Continuation register = eld Caller's Control register
-° — Frame pointer | —> |Cc Caller’s Continuation register:
+Arg-syze Apaly m {G4 Caller's `Control` register a | farggze Apaly ] argo as
+Frame pointer _| 7 [ES] Caters `Continuation` register = eld Caller's `Control` register
+° — Frame pointer | —> |Cc Caller’s `Continuation` register:
 
 
 Figure 26. The push-apply-args operation
@@ -9439,7 +9495,7 @@ Arg-Size Aoply
 Local Pointer | —.
 fe Stack Pointer | | <9
 . / s
-i mS Frame pointer } > Caller's Continuation register
+i mS Frame pointer } > Caller's `Continuation` register
 i . SO car argument!
 
 - [Increasing addresses
@@ -9573,7 +9629,7 @@ Oy
 
 7
 
-Caller's Control register —
+Caller's `Control` register —
 
  
 
@@ -9581,7 +9637,7 @@ Caller's Control register —
 
  
 
-Caller’s Continuation register
+Caller’s `Continuation` register
 
  
 
@@ -9640,8 +9696,8 @@ next argument2 (optional)
 edr- ‘
 next argument! (optional)
 raat _argumento (required)
-. Cy Caller's Control register _
-I Frame pointer | —> iC&] Callers Continuation register
+. Cy Caller's `Control` register _
+I Frame pointer | —> iC&] Callers `Continuation` register
 
  
 
@@ -9689,7 +9745,7 @@ next _ -argumentd (required)
 
 {ey
 
-'. Caller's Control register
+'. Caller's `Control` register
 
  
 
@@ -9725,7 +9781,7 @@ cel
 
  
 
-Caller's Continuation register
+Caller's `Continuation` register
 
  
 
@@ -9780,7 +9836,7 @@ The effect of the locate-locals instruction
 
  
 
-Caller’ s Continuation n register
+Caller’ s `Continuation` n register
 
  
 
@@ -9846,7 +9902,7 @@ the top of the stack; the number of words can be either fixed or variable.
 The form of values desired by the caller can be to throw all the values away, to
 push the first value on the stack, or to push on the stack all the values and a
 fixnum which is the. number of values excluding itself. The caller uses the value-
-disposition field of the Control register to specify the desired form of values. Note
+disposition field of the `Control` register to specify the desired form of values. Note
 that any form of values supplied to the return instruction can be converted to any
 form of values desired by the caller. In addition to this format conversion, the
 return instruction must move the values from one place in the stack to another,
@@ -9889,7 +9945,7 @@ value(s) (that is, they could be discarded).
 Symbolies, Inc.
 
 Before return can remove the frame from the stack, it may have to perform other
-cleanup actions. These are specified by the Cleanup Bits in the Control register
+cleanup actions. These are specified by the Cleanup Bits in the `Control` register
 being nonzero. The actions include popping the binding stack, popping the. catch
 stack (a list threaded through the control stack), executing unwind-protect
 instructions (which may pop the data stack), and escaping to arbitrary software.
@@ -9899,7 +9955,7 @@ See the section".Frame Cleanup.”
 state of the caller using the information saved in the frame header of the frame
 being abandoned, according to this procedure:
 
-PC <= Continuation register (unless vd is return)
+PC <= `Continuation` register (unless vd is return)
 Continuation register <= FPI|@
 
 temp <= FP{1
@@ -9919,7 +9975,7 @@ the stack cache is empty. The return instruction does not worry about refilling
 the stack cache at this stage.
 
 The return instruction now places the values being returned at the top of the
-contro] stack, according to the value disposition field in the old Control Register
+contro] stack, according to the value disposition field in the old `Control` Register
 and the particular type of return instruction being éxecuted. The return-single
 instruction can simply push its argument, but the return-multiple and
 return-kludge instructions may have to transfer a block of values. The source
@@ -9994,7 +10050,7 @@ smashes-stack attribute.
 
 ==== Frame Cleanup
 
-The Cleanup Bits in the Control register specify actions necessary before the
+The Cleanup Bits in the `Control` register specify actions necessary before the
 frame can be exited. -Traps, such as page faults, can occur while cleaning up.
 After handling the trap, the return instruction is retried.. The. state of the stack
 while cleaning up is always self-consistent.
@@ -10024,7 +10080,7 @@ the stack.
 * Set the PC to the catch-block-PC, which is the address of
 the cleanup handier.
 
-« Set the cleanup-in-progress bit in the Control register.
+« Set the cleanup-in-progress bit in the `Control` register.
 
 e Set control-register.cleanup-catch in accordance with the
 cdr code of catch-biock-previous and at the same time
@@ -10048,7 +10104,7 @@ because the bindings cleanup bit. will be set for the frame). The
 following actions are taken:
 
 Set. control-register.cleanup-catch in accordance with the —
-edr code of catch-block-previous. The hardware is
+cdr code of catch-block-previous. The hardware is
 permitted, but not required, to. restore control-
 register.extra-argument.
 
@@ -10138,7 +10194,7 @@ word saves two bits of the control register that need to be restored.
 272
 Symbolies, Inc.
 
-The catch-block-continuation word saves the Continuation hardware register so that
+The catch-block-continuation word saves the `Continuation` hardware register so that
 throw can restore it. The cdr-code field of this word saves the value disposition
 of a catch; this tells the throw function where to put the values thrown. This
 word is not used by unwind-protect.
@@ -10276,7 +10332,7 @@ differently; it. doesn’t. modify. the value disposition of each frame until it
 about to return from it. This still has a possibility of the same bug, since there
 could be a catch in the frame being returned from, but the timing window is open
 for a.much smaller time. The 3600’s method is more difficult to do on the [Mach
-because of the Control register.
+because of the `Control` register.
 
 catch-block-invalid catches nonlocal, but lexical, gos and returns too, since they
 are compiled as throw to a special tag. It does not catch local gos and returns
@@ -10709,7 +10765,7 @@ code to 3, set continuation to the contents of the trap vector entry, clear the
 
 _ control-register.extra-argument bit and control-register.trace-bits, and set the
 
-control-register.trap-mode field to the maximum of the edr code of the trap
+control-register.trap-mode field to the maximum of the cdr code of the trap
 vector entry and the current trap-mode. Oo
 
 . Push the trap vector index.
@@ -10972,7 +11028,7 @@ current trap mode permits sequence breaks.
 Preemption is switching from the current.process to the scheduler. .This is.a software operation, which has hardware
 support. for its initiation.
 
-Preempt-request and preempt-pending are bits in a global register, not in the Control register. These bits are set at
+Preempt-request and preempt-pending are bits in a global register, not in the `Control` register. These bits are set at
 the same time by software, such as a clock sequence break handler, that. wants to preempt the current process. If
 preempt- pending is'set, and the processor is in emulator mode, then.a preempt-request trap occurs after the current
 instruction completes. The trap handler clears the preempt-pending bit and then checks whether the process can be
@@ -11013,8 +11069,8 @@ page 280.
 
 ==== Trace Traps
 
-Instruction-trace, call-trace, and trace-pending are three bits in the Control register, set and cleared by software in
-saved copies of the Control register in memory. Trace-pending can also be set by hardware.’ Reset and Init clear all
+Instruction-trace, call-trace, and trace-pending are three bits in the `Control` register, set and cleared by software in
+saved copies of the `Control` register in memory. Trace-pending can also be set by hardware.’ Reset and Init clear all
 three of these bits. The hardware clears all three of these bits whenever a trap oceurs, after saving the Control
 register on the stack.
 
@@ -11026,13 +11082,13 @@ instruction returned to.
 
 When a return instruction is executed repeatedly. because of Value-disposition Return, and trace-pending is set by
 restoring a Control-register value, the trap either occurs immediately or after the repeated Return operations finish;
-the architecture doesn’t specify which. The trace-pending values in the several Control register values that are
+the architecture doesn’t specify which. The trace-pending values in the several `Control` register values that are
 restored are effectively ORed together, so the trap is not: lost.
 
 If instruction-trace is 1 at the beginning of an instruction, completion of the instruction sets trace-pending and
 causes a trap before the next instruction executes. Hf a post-trap occurs when instruction-trace is 1, trace-pending is.
-set in the Control register saved as part of taking the trap. This is not true of a pre- trap. If a return instruction
-restores a Control register value with the instruction- trace bit set, the instruction returned to, is, executed before
+set in the `Control` register saved as part of taking the trap. This is not true of a pre- trap. If a return instruction
+restores a `Control` register value with the instruction- trace bit set, the instruction returned to, is, executed before
 the trap occurs. Symbolics, ine.
 
 If call-trace is 1,-the finish-call instruction sets trace-pending and causes a trap before the first instruction of the
@@ -11047,7 +11103,7 @@ See the section".Pull-apply-arg"., page 261.
 A pull-apply-args pre-trap is taken from a function entry instruction to extract additional arguments from an apply
 argument that the microcode is not capable of doing. The trap handler takes two arguments, the number of arguments to
 pull, ‘and the apply argument, which is popped off the stack before the trap is taken. The trap handler extracts. the
-arguments, updates the saved Control register to reflect the new state of the previous frame, and return-kludges the
+arguments, updates the saved `Control` register to reflect the new state of the previous frame, and return-kludges the
 extracted arguments and the remaining apply argument, if any, directly into the correct place in the previous frame.
 
 ====  FEP-mode Traps 0
@@ -11144,7 +11200,7 @@ Reset forces the processor to take an exception to fetch.a new PC from the trap 
 machine state if it is desired to resume execution at the point the reset occurred.
 
 Init initializes the processor hardware, and may abort outstanding memory accesses without completion, and soon. The PC
-is set to a fixed vma=pma address, 77400100, from which execution proceeds. See the section".Revision 0 Init PC”,
+is set to a fixed VMA=PMA address, 77400100, from which execution proceeds. See the section".Revision 0 Init PC”,
 page 301.
 
 === Appendix: Comparison of 3600-Family and I-Machine Exception Handling 
@@ -11293,7 +11349,7 @@ Revision 0 Return-kiudge
 Sets the cdr codes.of all values to cdr-next.
 Revision 0 Stack-bit
 
-' », sets the edr code of the operand to edr-next.
+' », sets the cdr code of the operand to edr-next.
 Revision 0 Stack-blt-address
 -- sets the cdr code of the operand to cdr-next.
 Revision 0 Unbind-n
@@ -11364,7 +11420,7 @@ See the section".Revision 0 Unbind-"..
 
 Revision 0 Init PC
 
-Revision 0 Init sets the PC to vma=pma 0.
+Revision 0 Init sets the PC to VMA=PMA 0.
 
 [appendix]
 == Summary of Omitted 3600 Instructions
@@ -11600,7 +11656,7 @@ way to the BAR.
 The input to the map cache now has three possibilities instead of two:
 
 mapped virtual address
-vma=pma virtual address
+VMA=PMA virtual address
 dtp-physical-address physical address
 
 The possibilities for cache-control output lines/signals/meanings for each of the
@@ -11826,7 +11882,7 @@ instructions, including stack-blt. -
 Catch Block Pointer
 * PC
 * Control Register
-¢ Continuation Register
+¢ `Continuation` Register
 * Floating Point State
 ° Mode - rounding, underflow-to-0, ...
 ° Status - sticky-over/underfiow, ...
@@ -13415,4 +13471,4 @@ Types of Memory References 85
 Unchecked Operands 89
 Unmapped Accesses to Self 205
 Unmapped Addresses 58
-
+
