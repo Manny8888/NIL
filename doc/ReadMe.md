@@ -6,14 +6,17 @@ The original is a OCR-ed pdf file sourced from bitsavers.org.
 The text is formatted in asciidoc markdown.
 
 
-Two ways to work with asciidoc documents:
+Few ways to work with asciidoc documents with real-time preview:
+- Install AsciidocFX (https://github.com/asciidocfx/AsciidocFX)
+
 - Easy: install the Firefox addon / Chrome extension asciidoctor.js, which
   monitors the adoc file and converts to html on the fly. Firefox seems quicker
   for some reason...
 
-- Install asciidoctor-pdf and asciidoctor-diagram, then run `asciidoctor-pdf
+- For a pdf version, install asciidoctor-pdf and asciidoctor-diagram, then run `asciidoctor-pdf
   --verbose -r asciidoctor-diagram [filename.adoc]`.
 
+  
 Note that:
 - The file is edited as and when particular sections are read, starting with the
   Memory Layout chapter.
